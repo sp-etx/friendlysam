@@ -50,14 +50,19 @@ class Domain(object):
 
 class Interval(Domain):
     """docstring for Interval"""
-    def __init__(self, start, stop, cycle=False):
+    def __init__(self, start, stop, cycle=False, type=None):
         super(Interval, self).__init__()
         self._start = start
         self._stop = stop
         self._length = stop - start
         self._cycle = cycle
+        self._type = type
 
     def contains(self, value):
+        if self._type:
+            if not isinstance(value, type):
+                return False
+
         return self._start <= value <= self._stop
 
     def step(self, value, step):
@@ -69,12 +74,6 @@ class Interval(Domain):
             result = value + step
         
         return self[result]
-
-
-class IntInterval(Interval):
-
-    def contains(self, value):
-        return super(IntInterval, self).contains(value) and isinstance(value, int)
 
 
 class OrderedSet(Domain):
