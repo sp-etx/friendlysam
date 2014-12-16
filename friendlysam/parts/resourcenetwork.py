@@ -31,7 +31,7 @@ class ResourceNetwork(Part):
 
     def add_node(self, n):
         self._graph.add_node(n)
-        self.add_element(n)
+        self.add_part(n)
 
     def add_nodes(self, *nodes):
         map(self.add_node, nodes)
@@ -59,17 +59,6 @@ class ResourceNetwork(Part):
     def fix_flows(self, opt, t):
         for flow in self.flows.values():
             flow.fix_from(opt, t)
-
-    def _save_flows(self, group):
-        for edge in self.flows:
-            flow = self.flows[edge]
-            times = flow.fixed_indices
-            subgroup = group.create_group('flows/' + repr(edge))
-            subgroup.attrs['from'] = repr(edge[0])
-            subgroup.attrs['to'] = repr(edge[1])
-            subgroup.create_dataset('time', data=np.array(times))
-            subgroup.create_dataset('flow',
-                data=np.array([flow.get_expr(None, t) for t in times]))
 
     def _get_inflow_expr(self, opt, node, t):
         in_edges = self._graph.in_edges(nbunch=[node])
