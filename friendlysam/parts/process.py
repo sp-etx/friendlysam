@@ -5,11 +5,11 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 
-from friendlysam.components import Element
+from friendlysam.parts import Part
 
 MAX_ACTIVITY = 1e5
 
-class Process(Element):
+class Process(Part):
     """docstring for Process"""
     def __init__(self, **kwargs):
         super(Process, self).__init__(**kwargs)

@@ -2,17 +2,17 @@
 
 from __future__ import division
 
-class Element(object):
-    """docstring for Element"""
+class Part(object):
+    """docstring for Part"""
 
     _element_counter = 0
 
     def __init__(self, name=None):
-        super(Element, self).__init__()
-        Element._element_counter += 1
+        super(Part, self).__init__()
+        Part._element_counter += 1
         
         if name is None:
-            name = 'Element' + str(Element._element_counter)
+            name = 'Part' + str(Part._element_counter)
         self.name = name
 
         self._elements = set()

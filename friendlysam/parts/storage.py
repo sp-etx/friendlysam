@@ -5,10 +5,10 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 
-from friendlysam.components import Element
+from friendlysam.parts import Part
 
 
-class Storage(Element):
+class Storage(Part):
     """docstring for Storage"""
     def __init__(self, resource=None, capacity=None, maxchange=None, **kwargs):
         super(Storage, self).__init__(**kwargs)

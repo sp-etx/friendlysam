@@ -2,10 +2,10 @@
 
 from __future__ import division
 
-from friendlysam.components import Element, Process, Storage
+from friendlysam.parts import Part, Process, Storage
 
 
-class Cluster(Element):
+class Cluster(Part):
     """docstring for Cluster"""
     def __init__(self, *elements, **kwargs):
         super(Cluster, self).__init__(**kwargs)

@@ -8,9 +8,9 @@ import numpy as np
 import networkx as nx
 
 from optimization import Variable
-from friendlysam.components import Element, Process, Cluster, Storage
+from friendlysam.parts import Part, Process, Cluster, Storage
 
-class ResourceNetwork(Element):
+class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""
     def __init__(self, resource, **kwargs):
         super(ResourceNetwork, self).__init__(**kwargs)

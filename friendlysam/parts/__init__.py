@@ -1,6 +1,6 @@
-from friendlysam.components.cluster import Cluster
-from friendlysam.components.process import (Process, LinearProcess, PiecewiseAffineProcess, 
+from friendlysam.parts.cluster import Cluster
+from friendlysam.parts.process import (Process, LinearProcess, PiecewiseAffineProcess, 
     LinearSlowProcess, PiecewiseAffineSlowProcess)
-from friendlysam.components.energysystem import EnergySystem
-from friendlysam.components.resourcenetwork import ResourceNetwork
-from friendlysam.components.storage import Storage
+from friendlysam.parts.energysystem import EnergySystem
+from friendlysam.parts.resourcenetwork import ResourceNetwork
+from friendlysam.parts.storage import Storage
