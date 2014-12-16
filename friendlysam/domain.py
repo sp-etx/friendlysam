@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sympy
-
-class DomainError(Exception): pass
-    
 class Value(object):
     """docstring for Value"""
     def __init__(self, domain, value):
@@ -32,86 +28,72 @@ class Value(object):
     def __rsub__(self, term):
         return self.__sub__(self._value, term)
 
-        
+
+class DomainError(Exception): pass
+
 
 class Domain(object):
     """docstring for Domain"""
-    def __init__(self, length=0, start=0, cycle=False):
-        super(Domain, self).__init__()
-
-        self.cycle = cycle
-        self._start = start
-        self._length = length
 
     def __getitem__(self, value):
+        if not self.contains(value):
+            raise DomainError('value {} is not in this domain'.format(value))
         return Value(self, value)
 
-    def _get_index(self, value):
-        index = value - self._start
-        if not self._contains_index(index):
-            raise DomainError("value {} not in domain".format(value))
-        return index
-
-    def _get_value(self, index):
-        return index + self._start
-
-    def _contains_index(self, index):
-        return 0 <= index < self._length
-    
     def contains(self, value):
-        index = self._get_index(value)
-        return self._contains_index(index)
+        # Should return a boolean indicating whether value is in domain
+        raise NotImplementedError()
 
     def step(self, value, step):
-        index = self._get_index(value) + step
-        if self.cycle:
-            index = index % self._length
-        value = self._get_value(index)
-        return self[value]
+        # Should return a new Value object in this Domain
+        raise NotImplementedError()
+
+class Interval(Domain):
+    """docstring for Interval"""
+    def __init__(self, start, stop, cycle=False):
+        super(Interval, self).__init__()
+        self._start = start
+        self._stop = stop
+        self._length = stop - start
+        self._cycle = cycle
+
+    def contains(self, value):
+        return self._start <= value <= self._stop
+
+    def step(self, value, step):
+        assert self.contains(value)
+
+        if self._cycle:
+            result = (value + step - self._start) % self._length + self._start
+        else:
+            result = value + step
+        
+        return self[result]
 
 
+class IntInterval(Interval):
 
-class MapDomain(object):
-    """docstring for MapDomain"""
+    def contains(self, value):
+        return super(IntInterval, self).contains(value) and isinstance(value, int)
+
+
+class OrderedSet(Domain):
+    """docstring for OrderedSet"""
     def __init__(self, values, cycle=False):
-        super(MapDomain, self).__init__()
+        super(OrderedSet, self).__init__()
         self._values = tuple(v for v in values)
-        self._indices = {val: index for index, val in enumerate(values)}
-        self.cycle = cycle
-
-    def __getitem__(self, value):
-        return Value(self, value)
+        self._indices = {val: index for index, val in enumerate(self._values)}
+        self._cycle = cycle
 
     def contains(self, value):
         return value in self._values
 
     def step(self, value, step):
         index = self._indices[value] + step
-        if self.cycle:
+        if self._cycle:
             index = index % len(self._values)
-        value = self._values[index]
+        try:
+            value = self._values[index]
+        except IndexError:
+            raise DomainError('cannot step outside domain')
         return self[value]
-
-class Process(object):
-    """docstring for Process"""
-    def __init__(self):
-        super(Process, self).__init__()
-        self._inflow = {}
-
-    def __str__(self):
-        return 'Process'
-
-    def inflow(self, time):
-        if not time in self._inflow:
-            self._inflow[time] = sympy.Symbol(str(self) + '.inflow(' + str(time) + ')')
-
-        return self._inflow[time]
-
-    def constraints(self, time):
-        return self.inflow(time) - self.inflow(time - 1) < 5
-
-dom = MapDomain(range(50), cycle=True)
-
-p = Process()
-print(p.constraints(dom[5]))
-
