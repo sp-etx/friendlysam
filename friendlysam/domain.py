@@ -28,6 +28,9 @@ class Value(object):
     def __rsub__(self, term):
         return self.__sub__(self._value, term)
 
+    def __cmp__(self, other):
+        return cmp(self.value, other)
+
 
 class DomainError(Exception): pass
 
