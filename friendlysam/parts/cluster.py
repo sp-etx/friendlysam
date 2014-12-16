@@ -2,9 +2,7 @@
 
 from __future__ import division
 
-from element import Element
-from process import Process
-from storage import Storage
+from friendlysam.components import Element, Process, Storage
 
 
 class Cluster(Element):

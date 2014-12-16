@@ -8,10 +8,7 @@ import numpy as np
 import networkx as nx
 
 from optimization import Variable
-from element import Element
-from process import Process
-from cluster import Cluster
-from storage import Storage
+from friendlysam.components import Element, Process, Cluster, Storage
 
 class ResourceNetwork(Element):
     """docstring for ResourceNetwork"""

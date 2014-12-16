@@ -5,9 +5,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 
-from element import Element
-from optimization import Variable, SOS1Variables, SOS2Variables
-from essim import datautil
+from friendlysam.components import Element
 
 MAX_ACTIVITY = 1e5
 

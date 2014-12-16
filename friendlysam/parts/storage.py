@@ -5,9 +5,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 
-from essim import datautil
-from element import Element
-from optimization import Variable
+from friendlysam.components import Element
 
 
 class Storage(Element):
