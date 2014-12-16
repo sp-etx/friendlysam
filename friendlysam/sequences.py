@@ -51,10 +51,10 @@ class Sequence(object):
         # Should return a new Item object in this Sequence
         raise NotImplementedError()
 
-class Interval(Sequence):
-    """docstring for Interval"""
-    def __init__(self, start, stop, cycle=False, type=None):
-        super(Interval, self).__init__()
+class Integers(Sequence):
+    """docstring for Integers"""
+    def __init__(self, start, stop, cycle=False):
+        super(Integers, self).__init__()
         self._start = start
         self._stop = stop
         self._length = stop - start
@@ -62,11 +62,7 @@ class Interval(Sequence):
         self._type = type
 
     def contains(self, value):
-        if self._type:
-            if not isinstance(value, type):
-                return False
-
-        return self._start <= value <= self._stop
+        return isinstance(value, int) and self._start <= value <= self._stop
 
     def step(self, value, step):
         assert self.contains(value)
