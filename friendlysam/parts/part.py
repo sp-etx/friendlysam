@@ -2,7 +2,28 @@
 
 from __future__ import division
 
-class Part(object):
+class Constrained(object):
+    """docstring for Constrained"""
+    def __init__(self):
+        super(Constrained, self).__init__()
+        self._constraint_funcs = set()
+
+    def add_constraint(self, c):
+        self._constraint_funcs.add(c)
+
+    def constraints(self, *args, **kwargs):
+        all_constraints = set()
+
+        for func in self._constraint_funcs:
+            constraints = func(*args, **kwargs)
+            try: # iterable?
+                all_constraints.update(constraints)
+            except TypeError: # not iterable!
+                all_constraints.add(constraints)
+
+        return all_constraints
+
+class Part(Constrained):
     """docstring for Part"""
 
     _part_counter = 0
