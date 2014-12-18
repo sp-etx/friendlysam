@@ -1,3 +1,4 @@
 env
 docs/_build/**
+*.pyc
 **/gurobi.log
