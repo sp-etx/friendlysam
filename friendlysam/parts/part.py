@@ -2,11 +2,17 @@
 
 from __future__ import division
 
+import sympy
+
+class VariableError(Exception): pass
+
 class Constrained(object):
     """docstring for Constrained"""
     def __init__(self):
         super(Constrained, self).__init__()
         self._constraint_funcs = set()
+        self._var_counter = 0
+        self._vars = {}
 
     def add_constraint(self, c):
         self._constraint_funcs.add(c)
@@ -74,3 +80,31 @@ class Part(Constrained):
     def all_decendants(self):
         return self.parts.union(
             *[p.all_decendants for p in self.parts])
+
+
+    def _augment_var_name(self, name):
+        return '{}.{}'.format(self.name, name)
+
+    def _register_var_name(self, name=None):
+        if name:
+            name = self._augment_var_name(name)
+        if name in self._vars:
+            raise VariableError('variable {} already exists'.format(name))
+        while not name or name in self._vars:
+            self._var_counter += 1
+            name = self._augment_var_name('var{}'.format(self._var_counter))
+        return name
+
+
+    def make_var(self, name=None, lb=None, ub=None):
+        name = self._register_var_name(name)
+        symbol = sympy.Symbol(name)
+        self._vars[name] = symbol
+
+        if lb is not None:
+            raise NotImplementedError() # should register constraints for lower bound
+
+        if ub is not None:
+            raise NotImplementedError() # should register constraints for upper bound
+
+        return symbol
