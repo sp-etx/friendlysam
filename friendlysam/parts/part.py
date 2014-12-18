@@ -10,8 +10,6 @@ class Constrained(object):
         super(Constrained, self).__init__()
         self._fixed_constraints = set()
         self._indexed_constraints = set()
-        self._var_counter = 0
-        self._vars = {}
 
     def constrain(self, constraints):
         try:
@@ -57,7 +55,6 @@ class Part(Constrained):
         self.name = name
 
         self._parts = set()
-        self._opt_setup_funcs = list()
 
     def __str__(self):
         return self.name
@@ -104,20 +101,3 @@ class Part(Constrained):
             constraints = opt.make_constraints(var, **kwargs)
         self.constrain(constraints)
         return var
-
-
-    def _augment_var_name(self, name):
-        return '{}.{}'.format(self.name, name)
-
-    def _register_var_name(self, name=None):
-        if name:
-            name = self._augment_var_name(name)
-        if name in self._vars:
-            raise VariableError('variable {} already exists'.format(name))
-        while not name or name in self._vars:
-            self._var_counter += 1
-            name = self._augment_var_name('var{}'.format(self._var_counter))
-        return name
-
-
-    
