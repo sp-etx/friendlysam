@@ -5,6 +5,105 @@ import gurobipy
 import operator
 from enum import Enum
 
+class VariableError(Exception): pass
+
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+class VariableFactory(object):
+    __metaclass__ = Singleton
+
+    def __init__(self):
+        super(VariableFactory, self).__init__()
+        self._names = set()
+        self._counter = 0
+
+    def _unique_name(self, name):
+        if name is not None:
+            if name in self._names:
+                raise VariableError('a variable named {} already exists'.format(name))
+            elif name == '':
+                raise VariableError('empty string is not an allowed variable name')
+            elif not isinstance(name, str):
+                raise VariableError('variable name should be a string')
+
+        while name is None or name in self._names:
+            self._counter += 1
+            name = 'x{}'.format(self._counter)
+
+        self._names.add(name)
+
+        return name
+
+    def make_var(self, name=None, indexed=False):
+        name = self._unique_name(name)
+        if indexed:
+            symbol = LazyIndexedFunction(lambda idx: self.make_var('{}({})'.format(name, idx)))
+        else:
+            symbol = sympy.Symbol(name)
+        return symbol
+
+def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
+    try:
+        symbols = tuple(symbols)
+    except TypeError: # symbols was not iterable
+        symbols = (symbols, )
+
+    constraints = set()
+    if lb is not None:
+        constraints.update(lb <= s for s in symbols)
+    if ub is not None:
+        constraints.update(s <= ub for s in symbols)
+
+    if sos1:
+        constraints.add(SOS1Constraint(symbols))
+
+    if sos2:
+        constraints.add(SOS2Constraint(symbols))
+
+    return constraints
+
+
+
+class SOS1Constraint(object):
+    """docstring for SOS1Constraint"""
+    def __init__(self, symbols):
+        super(SOS1Constraint, self).__init__()
+        self._symbols = symbols
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+
+class SOS2Constraint(object):
+    """docstring for SOS2Constraint"""
+    def __init__(self, symbols):
+        super(SOS2Constraint, self).__init__()
+        self._symbols = symbols
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+
+class LazyIndexedFunction(object):
+    """docstring for LazyIndexedFunction"""
+    def __init__(self, func):
+        super(LazyIndexedFunction, self).__init__()
+        self._func = func
+        self._items = {}
+
+    def __getitem__(self, index):
+        if not index in self._items:
+            self._items[index] = self._func(index)
+        return self._items[index]
+
+
 class Sense(Enum):
     """The sense of an optimization objective"""
     minimize = 1

@@ -2,32 +2,46 @@
 
 from __future__ import division
 
-import sympy
-
-class VariableError(Exception): pass
+import friendlysam.optimization as opt
 
 class Constrained(object):
     """docstring for Constrained"""
     def __init__(self):
         super(Constrained, self).__init__()
-        self._constraint_funcs = set()
+        self._fixed_constraints = set()
+        self._indexed_constraints = set()
         self._var_counter = 0
         self._vars = {}
 
-    def add_constraint(self, c):
-        self._constraint_funcs.add(c)
+    def constrain(self, constraints):
+        try:
+            constraints = set(constraints)
+        except TypeError: # not iterable
+            constraints = set((constraints,))
 
-    def constraints(self, *args, **kwargs):
-        all_constraints = set()
+        callables = set(filter(callable, constraints))
+        other = constraints - callables
 
-        for func in self._constraint_funcs:
-            constraints = func(*args, **kwargs)
-            try: # iterable?
-                all_constraints.update(constraints)
-            except TypeError: # not iterable!
-                all_constraints.add(constraints)
+        self._indexed_constraints.update(callables)
+        self._fixed_constraints.update(other)
 
-        return all_constraints
+    def constraints(self, indices=None):
+        constraints = set()
+        if indices:
+            print('indices is', indices)
+            print('_indexed_constraints', self._indexed_constraints)
+            for func in self._indexed_constraints:
+                for index in indices:
+                    func_output = func(index)
+                    try:
+                        constraints.update(func_output)
+                    except TypeError: # not iterable
+                        constraints.add(func_output)
+
+        constraints.update(self._fixed_constraints)
+
+        return constraints
+
 
 class Part(Constrained):
     """docstring for Part"""
@@ -82,6 +96,16 @@ class Part(Constrained):
             *[p.all_decendants for p in self.parts])
 
 
+    def register_var(self, name=None, indexed=False, **kwargs):
+        var = opt.VariableFactory().make_var(name=name, indexed=indexed)
+        if indexed:
+            constraints = lambda idx: opt.make_constraints(var[idx], **kwargs)
+        else:
+            constraints = opt.make_constraints(var, **kwargs)
+        self.constrain(constraints)
+        return var
+
+
     def _augment_var_name(self, name):
         return '{}.{}'.format(self.name, name)
 
@@ -96,15 +120,4 @@ class Part(Constrained):
         return name
 
 
-    def make_var(self, name=None, lb=None, ub=None):
-        name = self._register_var_name(name)
-        symbol = sympy.Symbol(name)
-        self._vars[name] = symbol
-
-        if lb is not None:
-            raise NotImplementedError() # should register constraints for lower bound
-
-        if ub is not None:
-            raise NotImplementedError() # should register constraints for upper bound
-
-        return symbol
+    
