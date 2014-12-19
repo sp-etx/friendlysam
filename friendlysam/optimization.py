@@ -1,9 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import sympy
-import gurobipy
+from friendlysam.log import get_logger
+logger = get_logger(__name__)
+
 import operator
+
+import sympy
 from enum import Enum
+
+try:
+    import gurobipy
+except Exception, e:
+    logger.warning('gurobipy could not be imported ({})'.format(e.message))
+    no_gurobi = e.message
+
 
 class SymbolError(Exception): pass
 
@@ -152,12 +162,19 @@ class Solver(object):
         """
         raise NotImplementedError()
 
+class SolverNotAvailableError(Exception): pass
         
 class GurobiExpressionError(Exception): pass
 
 class GurobiSolver(object):
+
     """docstring for GurobiSolver"""
     def __init__(self):
+        try:
+            gurobipy
+        except NameError:
+            raise SolverNotAvailableError('cannot use GurobiSolver ({})'.format(no_gurobi))
+
         super(GurobiSolver, self).__init__()
 
     def solve(self, problem):
