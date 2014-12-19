@@ -39,13 +39,15 @@ class VariableFactory(object):
 
         return name
 
-    def make_var(self, name=None, indexed=False):
+    def symbol(self, name=None):
         name = self._unique_name(name)
-        if indexed:
-            symbol = LazyIndexedFunction(lambda idx: self.make_var('{}({})'.format(name, idx)))
-        else:
-            symbol = sympy.Symbol(name)
+        symbol = sympy.Symbol(name)
         return symbol
+
+    def symbol_collection(self, name=None):
+        name = self._unique_name(name)
+        collection = LazyIndexedFunction(lambda idx: self.symbol('{}({})'.format(name, idx)))
+        return collection
 
 def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
     try:

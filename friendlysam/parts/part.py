@@ -93,11 +93,14 @@ class Part(Constrained):
             *[p.all_decendants for p in self.parts])
 
 
-    def register_var(self, name=None, indexed=False, **kwargs):
-        var = opt.VariableFactory().make_var(name=name, indexed=indexed)
-        if indexed:
-            constraints = lambda idx: opt.make_constraints(var[idx], **kwargs)
-        else:
-            constraints = opt.make_constraints(var, **kwargs)
+    def variable(self, name=None, indexed=False, **kwargs):
+        symbol = opt.VariableFactory().symbol(name=name)
+        constraints = opt.make_constraints(symbol, **kwargs)
         self.constrain(constraints)
-        return var
+        return symbol
+
+    def variable_collection(self, name=None, **kwargs):
+        collection = opt.VariableFactory().symbol_collection(name=name)
+        constraints = lambda idx: opt.make_constraints(collection[idx], **kwargs)
+        self.constrain(constraints)
+        return collection
