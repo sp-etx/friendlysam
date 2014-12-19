@@ -5,7 +5,7 @@ import gurobipy
 import operator
 from enum import Enum
 
-class VariableError(Exception): pass
+class SymbolError(Exception): pass
 
 class Singleton(type):
     _instances = {}
@@ -14,22 +14,22 @@ class Singleton(type):
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
-class VariableFactory(object):
+class SymbolFactory(object):
     __metaclass__ = Singleton
 
     def __init__(self):
-        super(VariableFactory, self).__init__()
+        super(SymbolFactory, self).__init__()
         self._names = set()
         self._counter = 0
 
     def _unique_name(self, name):
         if name is not None:
             if name in self._names:
-                raise VariableError('a variable named {} already exists'.format(name))
+                raise SymbolError('a symbol named {} already exists'.format(name))
             elif name == '':
-                raise VariableError('empty string is not an allowed variable name')
+                raise SymbolError('empty string is not an allowed symbol name')
             elif not isinstance(name, str):
-                raise VariableError('variable name should be a string')
+                raise SymbolError('symbol name should be a string')
 
         while name is None or name in self._names:
             self._counter += 1
