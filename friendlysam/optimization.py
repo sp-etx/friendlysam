@@ -121,7 +121,7 @@ class Problem(object):
 
     @property
     def variables(self):
-        expressions = self.constraints.copy()
+        expressions = set(filter(lambda c: isinstance(c, sympy.Rel), self.constraints))
         expressions.add(self.objective)
         symbols = set()
         for e in expressions:
@@ -165,13 +165,28 @@ class GurobiSolver(object):
 
         self._set_objective(problem)
         
-        for c in problem.constraints:
-            print(c)
-            self._model.addConstr(self._make_gurobi_expr(c))
+        map(self._add_constraint, problem.constraints)
 
         self._model.optimize()
 
         return {key: value.x for key, value in self._gurobi_variables.items()}
+
+    def _add_constraint(self, c):
+        if isinstance(c, sympy.Rel):
+            print('Constraint', c)
+            self._model.addConstr(self._make_gurobi_expr(c))
+
+        elif isinstance(c, SOS1Constraint):
+            variables = [self._gurobi_variables[symbol] for symbol in c.symbols]
+            print('SOS1 group', c.symbols, variables)
+            self._model.addSOS(gurobipy.GRB.SOS_TYPE1, variables)
+
+        elif isinstance(c, SOS2Constraint):
+            variables = [self._gurobi_variables[symbol] for symbol in c.symbols]
+            order = [i + 1 for i in range(len(variables))]
+            print('SOS2 group', c.symbols, variables)
+            self._model.addSOS(gurobipy.GRB.SOS_TYPE2, variables, order)
+
 
     def _set_objective(self, problem):
         sense_translation = {
