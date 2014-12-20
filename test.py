@@ -1,6 +1,7 @@
 from friendlysam.parts.process import Process
 import sympy
 import friendlysam.optimization as opt
+from friendlysam.optimization.solvers.gurobi import GurobiSolver
 
 class ProcessA(Process):
     """docstring for ProcessA"""
@@ -32,7 +33,7 @@ p.sense = opt.Sense.maximize
 
 
 p.objective = sum([x.production[1](t) for t in times])
-p.solver = opt.GurobiSolver()
+p.solver = GurobiSolver()
 p.solve()
 for t in times:
     print(p._solution[x.v[t]])
