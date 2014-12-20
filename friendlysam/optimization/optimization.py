@@ -72,6 +72,7 @@ def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
     return constraints
 
 
+class ConstraintError(Exception): pass
 
 class SOS1Constraint(object):
     """docstring for SOS1Constraint"""
