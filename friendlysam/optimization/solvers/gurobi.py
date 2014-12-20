@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from friendlysam.log import get_logger
-from friendlysam.optimization import Solver, SolverError, SolverNotAvailableError, Sense
+from friendlysam.optimization import (
+    Solver, SolverError, SolverNotAvailableError, Sense, SOS1Constraint, SOS2Constraint)
 logger = get_logger(__name__)
 
 import operator
