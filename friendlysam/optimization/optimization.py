@@ -78,7 +78,10 @@ class SOS1Constraint(object):
     """docstring for SOS1Constraint"""
     def __init__(self, symbols):
         super(SOS1Constraint, self).__init__()
-        self._symbols = symbols
+        self._symbols = set(symbols)
+
+    def __str__(self):
+        return 'SOS1{}'.format(tuple(self._symbols))
 
     @property
     def symbols(self):
@@ -89,7 +92,12 @@ class SOS2Constraint(object):
     """docstring for SOS2Constraint"""
     def __init__(self, symbols):
         super(SOS2Constraint, self).__init__()
-        self._symbols = symbols
+        if not isinstance(symbols, tuple) or isinstance(symbols, list):
+            raise ConstraintError('symbols must be a tuple or list')
+        self._symbols = tuple(symbols)
+
+    def __str__(self):
+        return 'SOS2{}'.format(self._symbols)
 
     @property
     def symbols(self):
