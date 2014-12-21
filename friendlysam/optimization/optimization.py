@@ -75,35 +75,7 @@ def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
 class ConstraintError(Exception): pass
 
 
-class Constraint(object): pass
-
-
-class RelConstraint(Constraint):
-    """docstring for RelConstraint"""
-    def __init__(self, expr):
-        super(RelConstraint, self).__init__()
-        if isinstance(expr, sympy.Basic):
-            self._expr = expr
-        else:
-            raise ConstraintError('{} is not a sympy Basic object'.format(expr))
-
-    def __str__(self):
-        return str(self._expr)
-
-    @property
-    def expr(self):
-        return self._expr
-
-    def simplify(self, rules):
-        replaced = self.expr.xreplace(rules)
-        if replaced == self.expr:
-            return None
-        else:
-            return (RelConstraint(replaced),), {}
-
-
-
-class SOS1Constraint(Constraint):
+class SOS1Constraint(object):
     """docstring for SOS1Constraint"""
     def __init__(self, symbols):
         super(SOS1Constraint, self).__init__()
@@ -116,20 +88,7 @@ class SOS1Constraint(Constraint):
     def symbols(self):
         return self._symbols
 
-    def simplify(self, rule):
-        not_replaced = set(filter(
-            lambda r: isinstance(r, sympy.Basic),
-            (s.xreplace(rule) for s in self._symbols)))
-        replaced = self._symbols - not_replaced
-        if len(replaced) == 0:
-            return None
-        elif len(replaced) == 1:
-            return (), {s: 0 for s in not_replaced}
-        else:
-            return (False,), {}
-
-
-class SOS2Constraint(Constraint):
+class SOS2Constraint(object):
     """docstring for SOS2Constraint"""
     def __init__(self, symbols):
         super(SOS2Constraint, self).__init__()
@@ -169,63 +128,24 @@ class Problem(object):
     def __init__(self):
         super(Problem, self).__init__()
         self.sense = Sense.minimize
-        self._constraints = set()
-        self.rules = {}
+        self.constraints = set()
         self.objective = None
         self.solver = None
 
-    @property
-    def constraints(self):
-        return self._constraints
-
-    def add_constraints(self, constraints):
-        for c in constraints:
-            if isinstance(c, sympy.Rel):
-                c = RelConstraint(c)
-            if not isinstance(c, Constraint):
-                raise ConstraintError('{} is not a valid constraint'.format(c))
-            self._constraints.add(c)
 
     @property
     def variables(self):
-        expressions = set(filter(lambda c: isinstance(c, sympy.Rel), self._constraints))
+        expressions = set(filter(lambda c: isinstance(c, sympy.Rel), self.constraints))
         expressions.add(self.objective)
         symbols = set()
         for e in expressions:
             symbols.update(e.atoms(sympy.Symbol))
         return symbols
 
-    def simplify(self):
-        changed = False
-        logger.debug('Simplifying...')
-        new_constraints = set()
-        new_rules = {}
-        for c in self._constraints:
-            simplification = c.simplify(self.rules)
-            if simplification is None:
-                continue
-            else:
-                changed = True
-                new_constraints, new_rules = simplification
-                logger.debug('{} --> {}, {}'.format(
-                    c,
-                    '(' + ', '.join(str(c) for c in new_constraints) + ')',
-                    new_rules))
-                self._constraints.remove(c)
-                self._constraints.update(new_constraints)
-                self.rules.update(new_rules)
-
-        self._constraints.discard(True)
-        self._constraints.discard(sympy.true)
-
-        if changed:
-            self.simplify()
-
-
     def solve(self):
         """Try to solve the optimization problem"""
 
-        if False in self._constraints or sympy.false in self._constraints:
+        if False in self.constraints or sympy.false in self.constraints:
             raise ConstraintError('The problem cannot be solved because some constraint is False.')
 
         self._solution = self.solver.solve(self)
