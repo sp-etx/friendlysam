@@ -1,7 +1,7 @@
 from friendlysam.parts.process import Process
 import sympy
 import friendlysam.optimization as opt
-#from friendlysam.optimization.solvers.gurobi import GurobiSolver
+from friendlysam.optimization.solvers.pyomo import PyomoSolver
 
 class ProcessA(Process):
     """docstring for ProcessA"""
@@ -22,21 +22,16 @@ class ProcessA(Process):
         #self.constrain(lambda t: sympy.Eq(v[t], 1.5))
 
 
-
 x = ProcessA(20)
 
 p = opt.Problem()
 
 times = range(5)
-p.rules[x.v[0]] = 1
-p.rules[x.v[-1]] = 1
-p.add_constraints(x.constraints(times))
+p.constraints = x.constraints(times)
 p.sense = opt.Sense.maximize
 
-p.simplify()
-
-# p.objective = sum([x.production[1](t) for t in times])
-# p.solver = GurobiSolver()
-# p.solve()
-# for t in times:
-#     print(p._solution[x.v[t]])
+p.objective = sum([x.production[1](t) for t in times])
+p.solver = PyomoSolver()
+p.solve()
+for t in times:
+    print(p._solution[x.v[t]])
