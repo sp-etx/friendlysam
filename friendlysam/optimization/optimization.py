@@ -116,6 +116,9 @@ class LazyIndexedFunction(object):
             self._items[index] = self._func(index)
         return self._items[index]
 
+    def __setitem__(self, index, value):
+        self._items[index] = value
+
 
 class Sense(Enum):
     """The sense of an optimization objective"""
@@ -144,6 +147,9 @@ class Problem(object):
 
     def solve(self):
         """Try to solve the optimization problem"""
+
+        self.constraints.discard(True)
+        self.constraints.discard(sympy.true)
 
         if False in self.constraints or sympy.false in self.constraints:
             raise ConstraintError('The problem cannot be solved because some constraint is False.')
