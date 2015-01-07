@@ -7,19 +7,19 @@ class ProcessA(Process):
     """docstring for ProcessA"""
     def __init__(self, a):
         super(ProcessA, self).__init__()
-        #v = self.register_var(name='aoeu', lb=1, ub=2, indexed=True)
 
-        # x, y, z = [self.variable(str(i)) for i in range(3)]
-        # self.constrain(opt.make_constraints((x,y,z), sos1=True, lb=0, ub=3))
+        v = Indexed(lambda t: self.variable(name('x', t), ub=3))
 
-        v = self.variable_collection('x', ub=3)
-        self.v = v
-        self.production[1] = lambda t: v[t] * a
-        self.constrain(lambda t: v[t] * 1.1 <= v[t-1])
-        # self.consumption[2] = 1.1*x + 1.10000000000001*y + 0.9*z
+        def activity(t):
+            return self.piecewise_affine_arg(name('activity', t), [0, 0.50, 0.75, 1])
+        activity = Indexed(activity)
+        efficiency = Indexed(lambda t: PwaExpression(activity[t], [.70, .75, .92, .85]))
+        self.consumption[fuel] = activity * max_fuel_use
+        self.production[power] = Indexed(lambda t: efficiency * self.consumption[fuel][t])
+        self.production[heat] = Indexed(lambda t: alpha * self.production[power][t])
 
-        #self.constrain(lambda t: v[t] <= 3)
-        #self.constrain(lambda t: sympy.Eq(v[t], 1.5))
+        self.constraints += Indexed(lambda t: RelConstraint(activity[t] - activity[t-1] <= 0.1))
+
 
 
 x = ProcessA(20)
