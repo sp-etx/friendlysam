@@ -6,6 +6,7 @@ logger = get_logger(__name__)
 import sympy
 from enum import Enum
 
+from friendlysam.util import Indexed
 
 class SymbolError(Exception): pass
 
@@ -48,7 +49,7 @@ class SymbolFactory(object):
 
     def symbol_collection(self, name=None):
         name = self._unique_name(name)
-        collection = LazyIndexedFunction(lambda idx: self.symbol('{}({})'.format(name, idx)))
+        collection = Indexed(lambda idx: self.symbol('{}({})'.format(name, idx)))
         return collection
 
 def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
@@ -102,22 +103,6 @@ class SOS2Constraint(object):
     @property
     def symbols(self):
         return self._symbols
-
-
-class LazyIndexedFunction(object):
-    """docstring for LazyIndexedFunction"""
-    def __init__(self, func):
-        super(LazyIndexedFunction, self).__init__()
-        self._func = func
-        self._items = {}
-
-    def __getitem__(self, index):
-        if not index in self._items:
-            self._items[index] = self._func(index)
-        return self._items[index]
-
-    def __setitem__(self, index, value):
-        self._items[index] = value
 
 
 class Sense(Enum):
