@@ -6,8 +6,6 @@ logger = get_logger(__name__)
 import sympy
 from enum import Enum
 
-from friendlysam.util import Indexed
-
 
 class SymbolError(Exception): pass
 
