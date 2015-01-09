@@ -2,7 +2,7 @@ from friendlysam.parts.process import Process
 import sympy
 import friendlysam.optimization as opt
 from friendlysam.optimization import Variable, PiecewiseAffineArg
-#from friendlysam.optimization.solvers.pyomo import PyomoSolver
+from friendlysam.optimization.solvers.pyomo4 import PyomoSolver
 
 class ProcessA(Process):
     """docstring for ProcessA"""
@@ -10,9 +10,10 @@ class ProcessA(Process):
         super(ProcessA, self).__init__()
 
         self += Variable('activity', lb=0, ub=1)
-        self += PiecewiseAffineArg('y', [0, .4, .6, 1])
+        #self += PiecewiseAffineArg('y', [0, .4, .6, 1])
+        self += Variable('y', lb=0, ub=30)
 
-        self.production[1] = lambda t: self.activity() + self.y()
+        self.production[1] = lambda t: self.activity(t) + self.y(t)
 
 
 
@@ -29,8 +30,7 @@ for c in p.constraints:
 
 print x.production[1](3)
 
-#p.objective = sum([x.production[1](t) for t in times])
-# p.solver = PyomoSolver()
-# p.solve()
-# for t in times:
-#     print(p._solution[x.v[t]])
+p.objective = sum([x.production[1](t) for t in times])
+p.solver = PyomoSolver()
+p.solve()
+

@@ -5,9 +5,9 @@ from friendlysam.optimization import (
     Solver, SolverError, SolverNotAvailableError, Sense, SOS1Constraint, SOS2Constraint)
 logger = get_logger(__name__)
 
-import coopr.environ
-from coopr.opt import SolverFactory
-import coopr.pyomo as pyomo
+#from pyomo.environ import *
+import pyomo.environ
+from pyomo.opt import SolverFactory
 
 import operator
 
@@ -32,7 +32,7 @@ class PyomoSolver(Solver):
     def _add_var(self):
         self._var_counter += 1
         name = 'v{}'.format(self._var_counter)
-        var = pyomo.Var()
+        var = pyomo.environ.Var()
         setattr(self._model, name, var)
         return var
 
@@ -44,20 +44,20 @@ class PyomoSolver(Solver):
     def solve(self, problem):
         self._constraint_counter = 0
         self._var_counter = 0
-        self._model = pyomo.ConcreteModel()
+        self._model = pyomo.environ.ConcreteModel()
         
         self._pyomo_variables = {v: self._add_var() for v in problem.variables}
 
         self._set_objective(problem)
-        
+
         map(self._add_constraint, problem.constraints)
 
         self._model.preprocess()
 
         result = self._solver.solve(self._model)
 
-        if not result.Solution.Status == coopr.opt.SolutionStatus.optimal:
-            raise SolverError('pyomo solution status is {0}'.format(self._model.status))
+        if not result.Solution.Status == pyomo.opt.SolutionStatus.optimal:
+            raise SolverError("pyomo solution status is '{0}'".format(result.Solution.Status))
 
         self._model.load(result)
 
@@ -65,9 +65,8 @@ class PyomoSolver(Solver):
 
     def _add_constraint(self, c):
         if isinstance(c, sympy.Rel):
-            print('Constraint', c)
             expr = self._make_pyomo_expr(c)
-            setattr(self._model, self._get_constraint_name(), pyomo.Constraint(expr=expr))
+            setattr(self._model, self._get_constraint_name(), pyomo.environ.Constraint(expr=expr))
 
         elif isinstance(c, SOS1Constraint):
             raise NotImplementedError()
@@ -80,10 +79,10 @@ class PyomoSolver(Solver):
 
     def _set_objective(self, problem):
         sense_translation = {
-            Sense.minimize: pyomo.minimize,
-            Sense.maximize: pyomo.maximize }
+            Sense.minimize: pyomo.environ.minimize,
+            Sense.maximize: pyomo.environ.maximize }
         expr = self._make_pyomo_expr(problem.objective)
-        self._model.obj = pyomo.Objective(expr=expr, sense=sense_translation[problem.sense])
+        self._model.obj = pyomo.environ.Objective(expr=expr, sense=sense_translation[problem.sense])
 
     def _make_pyomo_expr(self, expr):
         symbols = sorted(expr.atoms(sympy.Symbol), key=lambda x: sympy.default_sort_key(x, 'lex'))
