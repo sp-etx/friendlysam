@@ -2,7 +2,7 @@
 
 from friendlysam.log import get_logger
 from friendlysam.optimization import (
-    Solver, SolverError, SolverNotAvailableError, Sense, SOS1Constraint, SOS2Constraint)
+    Solver, SolverError, SolverNotAvailableError, Sense, RelConstraint, SOS1Constraint, SOS2Constraint)
 logger = get_logger(__name__)
 
 #from pyomo.environ import *
@@ -64,6 +64,9 @@ class PyomoSolver(Solver):
         return {key: variable.value for key, variable in self._pyomo_variables.items()}
 
     def _add_constraint(self, c):
+        if isinstance(c, RelConstraint):
+            c = c.expr
+
         if isinstance(c, sympy.Rel):
             expr = self._make_pyomo_expr(c)
             setattr(self._model, self._get_constraint_name(), pyomo.environ.Constraint(expr=expr))
