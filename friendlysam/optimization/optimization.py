@@ -8,6 +8,7 @@ from enum import Enum
 
 from friendlysam.util import Indexed
 
+
 class SymbolError(Exception): pass
 
 class Singleton(type):
@@ -47,33 +48,95 @@ class SymbolFactory(object):
         symbol = sympy.Symbol(name)
         return symbol
 
-    def symbol_collection(self, name=None):
-        name = self._unique_name(name)
-        collection = Indexed(lambda idx: self.symbol('{}({})'.format(name, idx)))
-        return collection
 
-def make_constraints(symbols, lb=None, ub=None, sos1=False, sos2=False):
-    try:
-        symbols = tuple(symbols)
-    except TypeError: # symbols was not iterable
-        symbols = (symbols, )
+class Variable(object):
+    """docstring for Variable"""
+    def __init__(self, name, lb=None, ub=None, integer=False):
+        super(Variable, self).__init__()
+        self.name = name
+        self.lb = lb
+        self.ub = ub
+        self.integer = integer
+        self._symbols = {}
 
-    constraints = set()
-    if lb is not None:
-        constraints.update(lb <= s for s in symbols)
-    if ub is not None:
-        constraints.update(s <= ub for s in symbols)
 
-    if sos1:
-        constraints.add(SOS1Constraint(symbols))
+    def __call__(self, index=None):
+        if not index in self._symbols:
+            if index is None:
+                name = self.name
+            else:
+                name = '{}[{}]'.format(self.name, index)
+            self._symbols[index] = SymbolFactory().symbol(name)
+        return self._symbols[index]
 
-    if sos2:
-        constraints.add(SOS2Constraint(symbols))
+    def replace_symbols(self, data, indices):
+        for idx in indices:
+            if idx in self._symbols:
+                self._symbols[idx] = self.try_replace(self._symbols[idx], data)
+            
+    def constraint_func(self, index):
+        constraints = set()
+        if self.lb is not None:
+            constraints.add(self.lb <= self(index))
+        if self.ub is not None:
+            constraints.add(self(index) <= self.ub)
+        if self.integer:
+            raise NotImplementedError()
+        return constraints
 
-    return constraints
+    def try_replace(self, something, data):
+        return something.xreplace(data) if isinstance(something, sympy.Basic) else something
+
+
+class PiecewiseAffineArg(Variable):
+    """docstring for Variable"""
+    def __init__(self, name, points):
+        super(PiecewiseAffineArg, self).__init__(name)
+        self.points = points
+
+    def __call__(self, index=None):
+        return self.weighted_sum(index)
+
+    def weighted_sum(self, index):
+        return sum([point * weight for point, weight in zip(self.points, self.weights)])
+
+    def weights(self, index):
+        if not index in self._symbols:
+            self._symbols[index] = self._make_symbols(index)
+        return self._symbols[index]
+    
+
+    def _make_symbols(self, index):
+        if index is None:
+            return [sympy.Symbol('{}_{}'.format(self.name, i)) for i in self.points]
+        else:
+            return [sympy.Symbol('{}_{}[{}]'.format(self.name, i, index)) for i in self.points]
+
+    def replace_symbols(self, data, indices):
+        for idx in indices:
+            if idx in self._symbols:
+                self._symbols[idx] = [self.try_replace(s, data) for s in self._symbols[idx]]
+
+    def constraint_func(self, index):
+        weights = self.weights(index)
+        constraints = (
+            SOS2Constraint(weights),
+            RelConstraint(sympy.Eq(sum(weights), 1))
+            )
+        return constraints
 
 
 class ConstraintError(Exception): pass
+
+
+class RelConstraint(object):
+    """docstring for RelConstraint"""
+    def __init__(self, expr):
+        super(RelConstraint, self).__init__()
+        self.expr = expr
+
+    def __str__(self):
+        return str(self.expr)
 
 
 class SOS1Constraint(object):
@@ -93,7 +156,7 @@ class SOS2Constraint(object):
     """docstring for SOS2Constraint"""
     def __init__(self, symbols):
         super(SOS2Constraint, self).__init__()
-        if not isinstance(symbols, tuple) or isinstance(symbols, list):
+        if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
 

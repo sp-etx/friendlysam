@@ -8,37 +8,39 @@ class Constrained(object):
     """docstring for Constrained"""
     def __init__(self):
         super(Constrained, self).__init__()
-        self._fixed_constraints = set()
-        self._indexed_constraints = set()
+        self.constraint_funcs = set()
+        self.variables = set()
 
-    def constrain(self, constraints):
-        try:
-            constraints = set(constraints)
-        except TypeError: # not iterable
-            constraints = set((constraints,))
-
-        callables = set(filter(callable, constraints))
-        other = constraints - callables
-
-        self._indexed_constraints.update(callables)
-        self._fixed_constraints.update(other)
-
-    def constraints(self, indices=None):
+    def constraints(self, indices=(None,)):
         constraints = set()
-        if indices:
-            print('indices is', indices)
-            print('_indexed_constraints', self._indexed_constraints)
-            for func in self._indexed_constraints:
-                for index in indices:
-                    func_output = func(index)
-                    try:
-                        constraints.update(func_output)
-                    except TypeError: # not iterable
-                        constraints.add(func_output)
-
-        constraints.update(self._fixed_constraints)
+        for func in self.constraint_funcs:
+            for index in indices:
+                func_output = func(index)
+                try:
+                    constraints.update(func_output)
+                except TypeError: # not iterable
+                    raise opt.ConstraintError(
+                        "the constraint function '{}' did not return an iterable".format(func))
 
         return constraints
+
+
+    def __iadd__(self, other):
+        if isinstance(other, opt.Variable):
+            variable = other
+            local_name = variable.name
+            if hasattr(self, local_name):
+                raise AttributeError("an attribute named '{}' already exists".format(local_name))
+            variable.name = '{}.{}'.format(self.name, variable.name)
+            self.constraint_funcs.add(variable.constraint_func)
+            setattr(self, local_name, variable)
+            self.variables.add(variable)
+
+        return self
+
+    def replace_symbols(self, data, indices=(None,)):
+        for v in self.variables:
+            v.replace_symbols(data, indices)
 
 
 class Part(Constrained):

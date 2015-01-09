@@ -1,10 +1,13 @@
 from friendlysam.optimization.optimization import (
-    make_constraints,
     SymbolFactory,
+    Variable,
+    PiecewiseAffineArg,
+    RelConstraint,
     SOS1Constraint,
     SOS2Constraint,
     Sense,
     Problem,
     Solver,
     SolverError,
-    SolverNotAvailableError)
+    SolverNotAvailableError,
+    ConstraintError)
