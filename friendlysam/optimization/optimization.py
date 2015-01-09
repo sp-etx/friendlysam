@@ -75,9 +75,9 @@ class Variable(object):
     def constraint_func(self, index):
         constraints = set()
         if self.lb is not None:
-            constraints.add(self.lb <= self(index))
+            constraints.add(RelConstraint(self.lb <= self(index), desc='Lower bound'))
         if self.ub is not None:
-            constraints.add(self(index) <= self.ub)
+            constraints.add(RelConstraint(self(index) <= self.ub, 'Upper bound'))
         if self.integer:
             raise NotImplementedError()
         return constraints
@@ -118,8 +118,10 @@ class PiecewiseAffineArg(Variable):
     def constraint_func(self, index):
         weights = self.weights(index)
         constraints = (
-            SOS2Constraint(weights),
-            RelConstraint(sympy.Eq(sum(weights), 1))
+            SOS2Constraint(weights, desc='Weights of points in piecewise affine expression'),
+            RelConstraint(
+                sympy.Eq(sum(weights), 1),
+                desc='Sum of weights in piecewise affine expression')
             )
         return constraints
 
@@ -127,39 +129,52 @@ class PiecewiseAffineArg(Variable):
 class ConstraintError(Exception): pass
 
 
-class RelConstraint(object):
+class Constraint(object):
+    """docstring for Constraint"""
+    def __init__(self, desc=None):
+        super(Constraint, self).__init__()
+        self.desc = desc
+
+    def _with_desc(self, s):
+        if self.desc is None:
+            return s
+        else:
+            return '{} ({})'.format(s, self.desc)
+        
+
+class RelConstraint(Constraint):
     """docstring for RelConstraint"""
-    def __init__(self, expr):
-        super(RelConstraint, self).__init__()
+    def __init__(self, expr, desc=None):
+        super(RelConstraint, self).__init__(desc)
         self.expr = expr
 
     def __str__(self):
-        return str(self.expr)
+        return self._with_desc(str(self.expr))
 
 
-class SOS1Constraint(object):
+class SOS1Constraint(Constraint):
     """docstring for SOS1Constraint"""
-    def __init__(self, symbols):
-        super(SOS1Constraint, self).__init__()
+    def __init__(self, symbols, desc=None):
+        super(SOS1Constraint, self).__init__(desc)
         self._symbols = set(symbols)
 
     def __str__(self):
-        return 'SOS1{}'.format(tuple(self._symbols))
+        return self._with_desc('SOS1{}'.format(tuple(self._symbols)))
 
     @property
     def symbols(self):
         return self._symbols
 
-class SOS2Constraint(object):
+class SOS2Constraint(Constraint):
     """docstring for SOS2Constraint"""
-    def __init__(self, symbols):
-        super(SOS2Constraint, self).__init__()
+    def __init__(self, symbols, desc=None):
+        super(SOS2Constraint, self).__init__(desc)
         if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
 
     def __str__(self):
-        return 'SOS2{}'.format(self._symbols)
+        return self._with_desc('SOS2{}'.format(self._symbols))
 
     @property
     def symbols(self):
