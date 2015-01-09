@@ -98,7 +98,7 @@ class PiecewiseAffineArg(Variable):
         return self.weighted_sum(index)
 
     def weighted_sum(self, index):
-        return sum([point * weight for point, weight in zip(self.points, self.weights)])
+        return sum([point * weight for point, weight in zip(self.points, self.weights(index))])
 
     def weights(self, index):
         if not index in self._symbols:

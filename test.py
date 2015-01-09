@@ -12,7 +12,7 @@ class ProcessA(Process):
         self += Variable('activity', lb=0, ub=1)
         self += PiecewiseAffineArg('y', [0, .4, .6, 1])
 
-        self.production[1] = lambda t: self.activity + self.y
+        self.production[1] = lambda t: self.activity() + self.y()
 
 
 
@@ -26,6 +26,8 @@ p.constraints = x.constraints(times)
 p.sense = opt.Sense.maximize
 for c in p.constraints:
     print(c)
+
+print x.production[1](3)
 
 #p.objective = sum([x.production[1](t) for t in times])
 # p.solver = PyomoSolver()
