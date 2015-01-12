@@ -4,11 +4,12 @@ from __future__ import division
 
 import itertools
 
-import numpy as np
+import sympy
 import networkx as nx
 
-from optimization import Variable
 from friendlysam.parts import Part, Process, Cluster, Storage
+
+from friendlysam.optimization import RelConstraint
 
 class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""
@@ -18,8 +19,8 @@ class ResourceNetwork(Part):
         self._graph = nx.DiGraph()
 
         self.flows = dict()
-        self._add_opt_setup(self._setup_vars)
-        self._add_opt_setup(self._set_all_node_constraints)
+
+        self += self._all_balance_constraints
 
     @property
     def nodes(self):
@@ -46,59 +47,52 @@ class ResourceNetwork(Part):
         
         if not (n1, n2) in edges:
             self._graph.add_edge(n1, n2)
-            name = 'Flow (' + str(n1) + ', ' + str(n2) + ')'
-            self.flows[(n1, n2)] = Variable()
+            name = 'flow ({} --> {})'.format(n1, n2)
+            self.flows[(n1, n2)] = self.variable(name, lb=0)
 
         if bidirectional and (n2, n1) not in edges:
             self.add_edge(n2, n1)
 
-    def _setup_vars(self, opt):
-        for f in self.flows.values():
-            f.create_in(opt)
-
-    def fix_flows(self, opt, t):
-        for flow in self.flows.values():
-            flow.fix_from(opt, t)
-
-    def _get_inflow_expr(self, opt, node, t):
+    def _node_balance_constraint(self, node, t):
         in_edges = self._graph.in_edges(nbunch=[node])
-        return sum([self.flows[e].get_expr(opt, t) for e in in_edges])
-
-    def _get_outflow_expr(self, opt, node, t):
         out_edges = self._graph.out_edges(nbunch=[node])
-        return sum([self.flows[e].get_expr(opt, t) for e in out_edges])
+        inflow = sum([self.flows[e](t) for e in in_edges])
+        outflow = sum([self.flows[e](t) for e in out_edges])
 
-    def _set_all_node_constraints(self, opt):
-        node_time_pairs = itertools.product(self.nodes, opt.times)
-        constraints = list()
-        for (n, t) in node_time_pairs:
-            self._set_node_constraint(opt, n, t)
-
-    def _set_node_constraint(self, opt, node, t):
-        inflow = self._get_inflow_expr(opt, node, t)
-        outflow = self._get_outflow_expr(opt, node, t)
+        desc = 'Balance constraint ({}) for {}'
 
         if isinstance(node, Cluster):
-            net_cons = node.get_net_consumption(self.resource, opt, t)
-            opt.add_constraint(inflow == outflow + net_cons)
+            lhs = inflow
+            rhs = outflow + node.net_consumption(self.resource, t)
 
         elif isinstance(node, Storage):
-            if node.resource is self.resource:
-                accumulation = node.get_accumulation(opt, t)
-                opt.add_constraint(inflow == outflow + accumulation)
+            if not node.resource is self.resource:
+                return None
+            else:
+                lhs = inflow
+                rhs = outflow + node.accumulation(t)
         
         elif isinstance(node, Process):
             if self.resource in node.inputs:
-                consumption = node.consumption[self.resource](opt, t)
+                consumption = node.consumption[self.resource](t)
             else:
                 consumption = 0
 
             if self.resource in node.outputs:
-                production = node.production[self.resource](opt, t)
+                production = node.production[self.resource](t)
             else:
                 production = 0
 
-            opt.add_constraint(inflow + production == outflow + consumption)
+            lhs = inflow + production
+            rhs = outflow + consumption
 
         else:
             raise RuntimeError('node is not supported: ' + repr(node))
+
+        return RelConstraint(sympy.Eq(lhs, rhs), desc.format(self.resource, node))
+        
+
+    def _all_balance_constraints(self, idx):
+        constraints = set(self._node_balance_constraint(node, idx) for node in self.nodes)
+        constraints.discard(None)
+        return constraints

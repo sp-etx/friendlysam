@@ -2,7 +2,7 @@
 
 from __future__ import division
 
-from friendlysam.parts.part import Part
+from friendlysam.parts import Part
 
 class Process(Part):
     """docstring for Process"""

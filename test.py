@@ -1,35 +1,60 @@
-from friendlysam.parts.process import Process
+import itertools
+from friendlysam.parts import Process, Storage, ResourceNetwork
 import sympy
 import friendlysam.optimization as opt
-from friendlysam.optimization.solvers.pyomo4 import PyomoSolver
+#from friendlysam.optimization.solvers.pyomo4 import PyomoSolver
+from friendlysam.optimization.solvers.gurobi import GurobiSolver
 
-class ProcessA(Process):
-    """docstring for ProcessA"""
+RESOURCE = 0
+class Producer(Process):
+    """docstring for Producer"""
     def __init__(self, a):
-        super(ProcessA, self).__init__()
+        super(Producer, self).__init__()
 
         activity = self.variable('activity', lb=0, ub=1)
-        #self += PiecewiseAffineArg('y', [0, .4, .6, 1])
-        y = self.variable('y', lb=0, ub=30)
 
-        self.production[1] = lambda t: activity(t) + y(t)
+        self.production[RESOURCE] = lambda t: activity(t) * a
 
 
+class Consumer(Process):
+    """docstring for Consumer"""
+    def __init__(self, b):
+        super(Consumer, self).__init__()
+        self.b = b
+        
+        activity = self.variable('activity', lb=0, ub=1)
+        self.consumption[RESOURCE] = lambda t: activity(t) * b
 
-x = ProcessA(20)
 
-p = opt.Problem()
+prod = Producer(10)
+cons = Consumer(15)
+stor = Storage(RESOURCE, capacity=10)
+
+netw = ResourceNetwork(RESOURCE)
+netw.add_nodes(prod, cons, stor)
+netw.add_edge(prod, stor)
+netw.add_edge(stor, cons)
+
+parts = (prod, cons, stor, netw)
 
 times = range(5)
-print(x.constraint_funcs)
-p.constraints = x.constraints(times)
-p.sense = opt.Sense.maximize
-for c in p.constraints:
+
+prob = opt.Problem()
+prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
+
+for c in prob.constraints:
     print(c)
 
-print x.production[1](3)
 
-p.objective = sum([x.production[1](t) for t in times])
-p.solver = PyomoSolver()
-p.solve()
+prob.objective = sum([cons.consumption[RESOURCE](t) for t in times])
+prob.sense = opt.Sense.maximize
+prob.solver = GurobiSolver()
+prob.solve()
+
+print(prob.solution)
+for part in parts:
+    part.replace_symbols(prob.solution, times)
+
+for t in times:
+    print(stor.volume(t))
 

@@ -11,20 +11,20 @@ class Cluster(Part):
         super(Cluster, self).__init__(**kwargs)
         self.add_parts(*parts)
 
-    def get_net_consumption(self, res, opt, t):
+    def net_consumption(self, res, t):
         terms = list()
-        for e in self.parts:
-            if isinstance(e, Cluster):
-                terms.append(e.get_net_consumption(res, opt, t))
+        for part in self.parts:
+            if isinstance(part, Cluster):
+                terms.append(part.net_consumption(res, t))
             elif isinstance(e, Storage):
-                if e.resource is res:
-                    terms.append(e.get_accumulation(opt, t))
-            elif isinstance(e, Process):
+                if part.resource is res:
+                    terms.append(part.accumulation(t))
+            elif isinstance(part, Process):
                 if res in e.inputs:
-                    terms.append(e.consumption[res](opt, t))
+                    terms.append(part.consumption[res](t))
                 if res in e.outputs:
-                    terms.append(-e.production[res](opt, t))
+                    terms.append(-part.production[res](t))
             else:
-                raise RuntimeError('part is not supported: ' + repr(e))
+                raise RuntimeError('net consumption is not supported for {}'.format(part))
 
         return sum(terms)
