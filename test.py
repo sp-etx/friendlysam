@@ -1,7 +1,6 @@
 from friendlysam.parts.process import Process
 import sympy
 import friendlysam.optimization as opt
-from friendlysam.optimization import Variable, PiecewiseAffineArg
 from friendlysam.optimization.solvers.pyomo4 import PyomoSolver
 
 class ProcessA(Process):
@@ -9,11 +8,11 @@ class ProcessA(Process):
     def __init__(self, a):
         super(ProcessA, self).__init__()
 
-        self += Variable('activity', lb=0, ub=1)
+        activity = self.variable('activity', lb=0, ub=1)
         #self += PiecewiseAffineArg('y', [0, .4, .6, 1])
-        self += Variable('y', lb=0, ub=30)
+        y = self.variable('y', lb=0, ub=30)
 
-        self.production[1] = lambda t: self.activity(t) + self.y(t)
+        self.production[1] = lambda t: activity(t) + y(t)
 
 
 

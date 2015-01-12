@@ -9,7 +9,7 @@ class Constrained(object):
     def __init__(self):
         super(Constrained, self).__init__()
         self.constraint_funcs = set()
-        self.variables = set()
+        self._variables = set()
 
     def constraints(self, indices=(None,)):
         constraints = set()
@@ -26,20 +26,13 @@ class Constrained(object):
 
 
     def __iadd__(self, other):
-        if isinstance(other, opt.Variable):
-            variable = other
-            local_name = variable.name
-            if hasattr(self, local_name):
-                raise AttributeError("an attribute named '{}' already exists".format(local_name))
-            variable.name = '{}.{}'.format(self.name, variable.name)
-            self.constraint_funcs.add(variable.constraint_func)
-            setattr(self, local_name, variable)
-            self.variables.add(variable)
+        if callable(other):
+            self.constraint_funcs.add(other)
 
         return self
 
     def replace_symbols(self, data, indices=(None,)):
-        for v in self.variables:
+        for v in self._variables:
             v.replace_symbols(data, indices)
 
 
@@ -94,15 +87,11 @@ class Part(Constrained):
         return self.parts.union(
             *[p.all_decendants for p in self.parts])
 
+    def variable(self, *args, **kwargs):
+        variable = opt.Variable(name, *args, **kwargs)
+        variable.name = '{}.{}'.format(self.name, variable.name)
+        self._register_variable(variable)
 
-    def variable(self, name=None, indexed=False, **kwargs):
-        symbol = opt.SymbolFactory().symbol(name=name)
-        constraints = opt.make_constraints(symbol, **kwargs)
-        self.constrain(constraints)
-        return symbol
-
-    def variable_collection(self, name=None, **kwargs):
-        collection = opt.SymbolFactory().symbol_collection(name=name)
-        constraints = lambda idx: opt.make_constraints(collection[idx], **kwargs)
-        self.constrain(constraints)
-        return collection
+    def _register_variable(self, variable):
+        self.constraint_funcs.add(variable.constraint_func)
+        self._variables.add(variable)
