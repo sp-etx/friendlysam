@@ -88,9 +88,10 @@ class Part(Constrained):
             *[p.all_decendants for p in self.parts])
 
     def variable(self, *args, **kwargs):
-        variable = opt.Variable(name, *args, **kwargs)
+        variable = opt.Variable(*args, **kwargs)
         variable.name = '{}.{}'.format(self.name, variable.name)
         self._register_variable(variable)
+        return variable
 
     def _register_variable(self, variable):
         self.constraint_funcs.add(variable.constraint_func)
