@@ -35,6 +35,17 @@ class Constrained(object):
         for v in self._variables:
             v.replace_symbols(data, indices)
 
+    def variable(self, *args, **kwargs):
+        variable = opt.Variable(*args, **kwargs)
+        variable.name = '{}.{}'.format(self.name, variable.name)
+        self._register_variable(variable)
+        return variable
+
+    def _register_variable(self, variable):
+        self.constraint_funcs.add(variable.constraint_func)
+        self._variables.add(variable)
+
+
 
 class Part(Constrained):
     """docstring for Part"""
@@ -87,12 +98,3 @@ class Part(Constrained):
         return self.parts.union(
             *[p.all_decendants for p in self.parts])
 
-    def variable(self, *args, **kwargs):
-        variable = opt.Variable(*args, **kwargs)
-        variable.name = '{}.{}'.format(self.name, variable.name)
-        self._register_variable(variable)
-        return variable
-
-    def _register_variable(self, variable):
-        self.constraint_funcs.add(variable.constraint_func)
-        self._variables.add(variable)
