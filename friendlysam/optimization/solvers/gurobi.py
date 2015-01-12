@@ -2,7 +2,8 @@
 
 from friendlysam.log import get_logger
 from friendlysam.optimization import (
-    Solver, SolverError, SolverNotAvailableError, Sense, SOS1Constraint, SOS2Constraint)
+    Solver, SolverError, SolverNotAvailableError, Sense, 
+    SOS1Constraint, SOS2Constraint, RelConstraint)
 logger = get_logger(__name__)
 
 import operator
@@ -105,6 +106,9 @@ class GurobiSolver(Solver):
         return {key: value.x for key, value in self._gurobi_variables.items()}
 
     def _add_constraint(self, c):
+        if isinstance(c, RelConstraint):
+            c = c.expr
+
         if isinstance(c, sympy.Rel):
             print('Constraint', c)
             self._model.addConstr(self._make_gurobi_expr(c))
