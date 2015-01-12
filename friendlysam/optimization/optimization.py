@@ -3,6 +3,8 @@
 from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
+import itertools
+
 import sympy
 from enum import Enum
 
@@ -199,7 +201,11 @@ class Problem(object):
 
     @property
     def variables(self):
-        expressions = set(filter(lambda c: isinstance(c, sympy.Rel), self.constraints))
+        relations = itertools.chain(
+            filter(lambda c: isinstance(c, sympy.Rel), self.constraints),
+            [c.expr for c in filter(lambda c: isinstance(c, RelConstraint), self.constraints)])
+        expressions = set()
+        expressions.update(relations)
         expressions.add(self.objective)
         symbols = set()
         for e in expressions:
@@ -215,7 +221,7 @@ class Problem(object):
         if False in self.constraints or sympy.false in self.constraints:
             raise ConstraintError('The problem cannot be solved because some constraint is False.')
 
-        self._solution = self.solver.solve(self)
+        self.solution = self.solver.solve(self)
 
     def evaluate(self, expr):
         """Evaluate an expression in the optimal point of the optimization problem"""
