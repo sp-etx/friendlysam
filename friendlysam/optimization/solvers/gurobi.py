@@ -110,18 +110,15 @@ class GurobiSolver(Solver):
             c = c.expr
 
         if isinstance(c, sympy.Rel):
-            print('Constraint', c)
             self._model.addConstr(self._make_gurobi_expr(c))
 
         elif isinstance(c, SOS1Constraint):
             variables = [self._gurobi_variables[symbol] for symbol in c.symbols]
-            print('SOS1 group', c.symbols, variables)
             self._model.addSOS(gurobipy.GRB.SOS_TYPE1, variables)
 
         elif isinstance(c, SOS2Constraint):
             variables = [self._gurobi_variables[symbol] for symbol in c.symbols]
             order = [i + 1 for i in range(len(variables))]
-            print('SOS2 group', c.symbols, variables)
             self._model.addSOS(gurobipy.GRB.SOS_TYPE2, variables, order)
 
 

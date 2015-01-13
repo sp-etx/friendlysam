@@ -25,36 +25,45 @@ class Consumer(Process):
         activity = self.variable('activity', lb=0, ub=1)
         self.consumption[RESOURCE] = lambda t: activity(t) * b
 
-
-prod = Producer(10)
-cons = Consumer(15)
-stor = Storage(RESOURCE, capacity=10)
+n = 10
+prods = [Producer(10+i) for i in range(n)]
+conss = [Consumer(15-i) for i in range(n)]
+stors = [Storage(RESOURCE, capacity=10) for i in range(n)]
 
 netw = ResourceNetwork(RESOURCE)
-netw.add_nodes(prod, cons, stor)
-netw.add_edge(prod, stor)
-netw.add_edge(stor, cons)
+netw.add_nodes(*prods)
+netw.add_nodes(*conss)
+netw.add_nodes(*stors)
 
-parts = (prod, cons, stor, netw)
+for i in range(n):
+    netw.add_edge(prods[i], stors[i])
+    netw.add_edge(stors[i], conss[i])
 
-times = range(5)
+for i in range(n-1):
+    netw.add_edge(stors[i], stors[i+1])
+
+
+parts = prods + conss + stors + [netw]
+
+times = range(30)
 
 prob = opt.Problem()
 prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
 
-for c in prob.constraints:
-    print(c)
+# for c in prob.constraints:
+#     print(len(prob.constraints), c)
 
 
-prob.objective = sum([cons.consumption[RESOURCE](t) for t in times])
+prob.objective = sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)])
 prob.sense = opt.Sense.maximize
 prob.solver = PyomoSolver()
+#prob.solver = GurobiSolver()
 prob.solve()
 
-print(prob.solution)
+#print(prob.solution)
 for part in parts:
     part.replace_symbols(prob.solution, times)
 
-for t in times:
-    print(stor.volume(t))
+# for t in times:
+#     print(stors[0].volume(t))
 

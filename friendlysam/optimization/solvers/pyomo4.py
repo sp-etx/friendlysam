@@ -26,7 +26,8 @@ class PyomoSolver(Solver):
             SolverNotAvailableError if the solver is not available.
         """
         super(PyomoSolver, self).__init__()
-        self._solver = SolverFactory("cbc")#, solver_io="nl")
+        #self._solver = SolverFactory("gurobi", solver_io="python")
+        self._solver = SolverFactory("cbc")
 
 
     def _add_var(self):
