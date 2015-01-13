@@ -68,8 +68,8 @@ class Solver(object):
 class PyomoExpressionError(Exception): pass
 
 class PyomoSolver(Solver):
-
     """docstring for PyomoSolver"""
+
     def __init__(self, solver, **kwargs):
         """Create a new solver instance
 
@@ -114,12 +114,18 @@ class PyomoSolver(Solver):
         return {key: variable.value for key, variable in self._pyomo_variables.items()}
 
     def _add_constraint(self, c):
+        original = c
         if isinstance(c, RelConstraint):
             c = c.expr
 
         if isinstance(c, sympy.Rel):
-            expr = self._make_pyomo_expr(c)
-            setattr(self._model, self._get_constraint_name(), pyomo.environ.Constraint(expr=expr))
+            expr = self._make_pyomo_relation(c)
+            try:
+                setattr(self._model, self._get_constraint_name(), pyomo.environ.Constraint(expr=expr))
+            except ValueError, e:
+                print(e)
+                print(str(expr), str(original))
+                raise e
 
         elif isinstance(c, SOS1Constraint):
             raise NotImplementedError()
@@ -134,10 +140,10 @@ class PyomoSolver(Solver):
         sense_translation = {
             Sense.minimize: pyomo.environ.minimize,
             Sense.maximize: pyomo.environ.maximize }
-        expr = self._make_pyomo_expr(problem.objective)
+        expr = self._make_pyomo_poly(problem.objective)
         self._model.obj = pyomo.environ.Objective(expr=expr, sense=sense_translation[problem.sense])
 
-    def _make_pyomo_expr(self, expr):
+    def _make_pyomo_poly(self, expr):
         symbols = sorted(expr.atoms(sympy.Symbol), key=lambda x: sympy.default_sort_key(x, 'lex'))
 
         variables = [self._pyomo_variables[s] for s in symbols]
@@ -145,33 +151,37 @@ class PyomoSolver(Solver):
         if len(symbols) == 0:
             return float(expr)
 
-        elif expr.is_polynomial(*symbols):
-            polynomial = sympy.Poly(expr, *symbols)
-            terms = []
+        polynomial = expr.as_poly(*symbols)
+        if polynomial is None:
+            raise ValueError('{} is not a sympy polynomial'.format(expr))
 
-            for exponents, coeff in polynomial.terms():
-                coeff = float(coeff)
-                if all((e == 0 for e in exponents)):
-                    terms.append(coeff)
-                else:
-                    factors = []
-                    for base, exponent in filter(lambda (a, e): e != 0, zip(variables, exponents)):
-                        factors.extend([base] * exponent)
-                    terms.append(coeff * reduce(operator.mul, factors))
-            return sum(terms)
+        terms = []
 
+        for exponents, coeff in polynomial.terms():
+            coeff = float(coeff)
+            if all((e == 0 for e in exponents)):
+                terms.append(coeff)
+            else:
+                factors = []
+                for base, exponent in filter(lambda (a, e): e != 0, zip(variables, exponents)):
+                    factors.extend([base] * exponent)
+                terms.append(coeff * reduce(operator.mul, factors))
+        return sum(terms)
+
+    def _make_pyomo_relation(self, expr):
+
+        if isinstance(expr, sympy.LessThan):
+            a, b = expr.args
+            return self._make_pyomo_poly(a - b) <= 0
+            
         elif isinstance(expr, sympy.GreaterThan):
             a, b = expr.args
-            return self._make_pyomo_expr(a) >= self._make_pyomo_expr(b)
-
-        elif isinstance(expr, sympy.LessThan):
-            a, b = expr.args
-            return self._make_pyomo_expr(a) <= self._make_pyomo_expr(b)
-
+            return self._make_pyomo_poly(a - b) >= 0
+            
         elif isinstance(expr, sympy.Equality):
             a, b = expr.args
-            return self._make_pyomo_expr(a) == self._make_pyomo_expr(b)
-
+            return self._make_pyomo_poly(a - b) == 0
+            
         elif isinstance(expr, sympy.StrictGreaterThan) or isinstance(expr, sympy.StrictLessThan):
             raise PyomoExpressionError('Strict inequalities are not allowed.')
 
