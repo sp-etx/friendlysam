@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from friendlysam.log import get_logger
-from friendlysam.optimization import (
-    Solver, SolverError, SolverNotAvailableError, Sense, RelConstraint, SOS1Constraint, SOS2Constraint)
 logger = get_logger(__name__)
+from friendlysam.optimization.optimization import (
+    RelConstraint, SOS1Constraint, SOS2Constraint, Sense)
 
-#from pyomo.environ import *
 import pyomo.environ
 from pyomo.opt import SolverFactory
 
@@ -14,21 +13,71 @@ import operator
 import sympy
 from enum import Enum
 
-class PyomoExpressionError(Exception): pass
+DEFAULT_SOLVER_ORDER = ('gurobi', 'cbc')
+solver_order = DEFAULT_SOLVER_ORDER
 
-class PyomoSolver(Solver):
+_solver_funcs = {
+    'gurobi': lambda: PyomoSolver('gurobi', solver_io='python'),
+    'cbc': lambda: PyomoSolver('cbc', solver_io='asl')
+    }
 
-    """docstring for PyomoSolver"""
+def get_solver(*names):
+    if len(names) == 0:
+        names = solver_order
+
+    for name in names:
+        try:
+            return _solver_funcs[name]()
+        except SolverNotAvailableError:
+            pass
+
+
+class SolverNotAvailableError(Exception): pass
+
+class SolverError(Exception): pass
+
+class Solver(object):
+    """Base class for optimization solvers
+
+    This base class only defines the interface.
+    """
+
     def __init__(self):
         """Create a new solver instance
 
         Raises:
             SolverNotAvailableError if the solver is not available.
         """
-        super(PyomoSolver, self).__init__()
-        #self._solver = SolverFactory("gurobi", solver_io="python")
-        self._solver = SolverFactory("cbc")
+        super(Solver, self).__init__()
 
+        
+    def solve(self, problem):
+        """Solve an optimization problem and return the solution
+
+        Args:
+            problem (Problem): The optimization problem to solve.
+
+        Returns:
+            A dict `{variable: value for variable in problem.variables}`
+
+        Raises:
+            SolverError if problem could not be solved.
+        """
+        raise NotImplementedError()
+
+class PyomoExpressionError(Exception): pass
+
+class PyomoSolver(Solver):
+
+    """docstring for PyomoSolver"""
+    def __init__(self, solver, **kwargs):
+        """Create a new solver instance
+
+        Raises:
+            SolverNotAvailableError if the solver is not available.
+        """
+        super(PyomoSolver, self).__init__()
+        self._solver = SolverFactory(solver, **kwargs)
 
     def _add_var(self):
         self._var_counter += 1

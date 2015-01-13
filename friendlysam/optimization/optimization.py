@@ -8,7 +8,6 @@ import itertools
 import sympy
 from enum import Enum
 
-
 class SymbolError(Exception): pass
 
 class Singleton(type):
@@ -215,6 +214,9 @@ class Problem(object):
     def solve(self):
         """Try to solve the optimization problem"""
 
+        if self.solver is None:
+            self.solver = get_solver()
+
         self.constraints.discard(True)
         self.constraints.discard(sympy.true)
 
@@ -226,41 +228,6 @@ class Problem(object):
     def evaluate(self, expr):
         """Evaluate an expression in the optimal point of the optimization problem"""
         raise NotImplementedError()
-
-
-class SolverNotAvailableError(Exception): pass
-
-class SolverError(Exception): pass
-
-class Solver(object):
-    """Base class for optimization solvers
-
-    This base class only defines the interface.
-    """
-
-    def __init__(self):
-        """Create a new solver instance
-
-        Raises:
-            SolverNotAvailableError if the solver is not available.
-        """
-        super(Solver, self).__init__()
-
-        
-    def solve(self, problem):
-        """Solve an optimization problem and return the solution
-
-        Args:
-            problem (Problem): The optimization problem to solve.
-
-        Returns:
-            A dict `{variable: value for variable in problem.variables}`
-
-        Raises:
-            SolverError if problem could not be solved.
-        """
-        raise NotImplementedError()
-
 
 # import random
 # import time
@@ -299,3 +266,5 @@ class Solver(object):
 #     #     print(m.getQConstrs(), m.getConstrs())
 
 #     # print(time.time()-t0)
+
+from friendlysam.optimization.solvers import get_solver

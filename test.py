@@ -2,8 +2,6 @@ import itertools
 from friendlysam.parts import Process, Storage, ResourceNetwork
 import sympy
 import friendlysam.optimization as opt
-from friendlysam.optimization.solvers.pyomo4 import PyomoSolver
-#from friendlysam.optimization.solvers.gurobi import GurobiSolver
 
 RESOURCE = 0
 class Producer(Process):
@@ -53,17 +51,14 @@ prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
 # for c in prob.constraints:
 #     print(len(prob.constraints), c)
 
-
 prob.objective = sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)])
 prob.sense = opt.Sense.maximize
-prob.solver = PyomoSolver()
-#prob.solver = GurobiSolver()
 prob.solve()
 
 #print(prob.solution)
 for part in parts:
     part.replace_symbols(prob.solution, times)
 
-# for t in times:
-#     print(stors[0].volume(t))
+for t in times:
+    print(stors[0].volume(t))
 
