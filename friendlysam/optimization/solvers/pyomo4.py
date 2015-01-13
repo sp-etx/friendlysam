@@ -93,13 +93,14 @@ class PyomoSolver(Solver):
         variables = [self._pyomo_variables[s] for s in symbols]
 
         if len(symbols) == 0:
-            return expr
+            return float(expr)
 
         elif expr.is_polynomial(*symbols):
             polynomial = sympy.Poly(expr, *symbols)
             terms = []
 
             for exponents, coeff in polynomial.terms():
+                coeff = float(coeff)
                 if all((e == 0 for e in exponents)):
                     terms.append(coeff)
                 else:
