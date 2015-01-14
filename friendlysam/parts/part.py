@@ -10,7 +10,12 @@ class Constrained(object):
     def __init__(self):
         super(Constrained, self).__init__()
         self.constraint_funcs = set()
-        self._variables = set()
+
+
+    @property
+    def engine(self):
+        return self.model.engine
+    
 
     def constraints(self, indices=(None,)):
         constraints = set()
@@ -36,16 +41,12 @@ class Constrained(object):
         for v in self._variables:
             v.replace_symbols(data, indices)
 
-    def variable(self, name, *args, **kwargs):
+    def variable(self, name=None, **kwargs):
         name = '{}.{}'.format(self.name, name)
-        variable = Variable(name, **kwargs)
-        self._register_variable(variable)
-        return variable
-
-    def _register_variable(self, variable):
+        variable = Variable(name=name, **kwargs)
         self.constraint_funcs.add(variable.constraint_func)
-        self._variables.add(variable)
-
+        variable.owner = self
+        return variable
 
 
 class Part(Constrained):
@@ -78,16 +79,32 @@ class Part(Constrained):
                 "'" + str(self) + "' has more than one part '" + name + "'")
 
     @property
+    def model(self):
+        if not hasattr(self, '_model'):
+            self.model = None
+        return self._model
+    @model.setter
+    def model(self, value):
+        print(str(self), 'setting model', str(value))
+        self._model = value
+        for p in self.parts:
+            p.model = value
+    
+
+    @property
     def parts(self):
         return self._parts
 
     def add_part(self, p):
+        print(str(self), 'adding', str(p))
         self._parts.add(p)
         
         if self in self.all_decendants:
             self._parts.remove(p)
             raise ValueError('cannot add ' + str(p) + ' to ' + str(self) +
                 ' because it would generate a cyclic relationship')
+
+        p.model = self.model
 
 
     def add_parts(self, *parts):

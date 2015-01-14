@@ -10,21 +10,17 @@ import pyomo.environ as pyoenv
 import pyomo.opt
 from pyomo.opt import SolverFactory
 
-from friendlysam.misc import Singleton
-from friendlysam.optimization.optimization import Domain, Constraint, SOS1, SOS2, Minimize, Maximize
+from friendlysam.optimization.core import *
 
-DEFAULT_DOMAIN = Domain.real
-DEFAULT_SOLVER_ORDER = ('cbc', 'gurobi', 'cbc')
+DEFAULT_OPTIONS = dict(
+    solver_order=[
+        dict(name='cbc', solver_io='nl'),
+        dict(name='gurobi', solver_io='python')
+    ])
 
-class SymbolCatalog(object):
-    __metaclass__ = Singleton
-
-    def __init__(self):
-        super(SymbolCatalog, self).__init__()
-        self._names = set()
-        self._symbols = {}
-        self._options_funcs = {}
-
+    
+class PyomoEngine(object):
+    """docstring for PyomoEngine"""
     _domain_mapping = {
         Domain.real: pyoenv.Reals,
         Domain.integer: pyoenv.Integers,
@@ -32,186 +28,95 @@ class SymbolCatalog(object):
         None: None
     }
 
-    def _register_name(self, name):
+    def __init__(self):
+        super(PyomoEngine, self).__init__()
+        self.options = DEFAULT_OPTIONS
+        self._names = set()
+        self._var_name_counter = 0
+        self._variables = {}
+
+    def _register_unique_name(self, name):
         if name is not None:
             if name in self._names:
-                raise ValueError('a symbol named {} already exists'.format(name))
+                raise ValueError('a variable named {} already exists'.format(name))
             elif name == '':
-                raise ValueError('empty string is not an allowed symbol name')
+                raise ValueError('empty string is not an allowed variable name')
             elif not isinstance(name, str):
-                raise ValueError('symbol name should be a string')
-        self._names.add(name)
+                raise ValueError('variable name should be a string')
 
-    def _make(self, options):
-        name = options.pop('name')
-        self._register_name(name)
-        options['domain'] = self._domain_mapping[options.get('domain', None)]
-        symbol = pyoenv.Var(**options)
-        symbol.name = name
-        return symbol
+        while name is None or name in self._names:
+            self._var_name_counter += 1
+            name = 'x{}'.format(self._var_name_counter)
+
+        self._names.add(name)
+        return name
+
 
     def register(self, owner, options_func):
         self._options_funcs[owner] = options_func
 
-    def get(self, owner, index):
-        if not (owner, index) in self._symbols:
-            self._symbols[owner, index] = self._make(self._options_funcs[owner](index))
-        return self._symbols[owner, index]
+    def get_variable(self, variable, index):
+        if not (variable, index) in self._variables:
+            options = dict(
+                lb=variable.lb,
+                ub=variable.ub,
+                domain=variable.domain,
+                name=variable.name)
 
-    def set(self, owner, index, value):
-        try:
-            self._symbols[owner, index] = float(value)
-        except TypeError:
-            raise TypeError("Set variables to float-like things (you sent '{}').".format(value))
+            for key, value in options.items():
+                if callable(value):
+                    options[key] = value(index)
+
+            name = self._register_unique_name(options.pop('name'))
+
+            options['domain'] = self._domain_mapping[options['domain']]
+            options['bounds'] = (options['lb'], options['ub'])
+            del options['lb']
+            del options['ub']
+
+            symbol = pyoenv.Var(**options)
+            symbol.name = name
+
+            self._variables[variable, index] = symbol
+
+        return self._variables[variable, index]
 
     def variables(self):
-        return self._symbols.values()
-    
+        return self._variables.values()
 
+    def delete_variable(self, variable, index):
+        del self._variables[variable, index]
 
-class Variable(object):
-    """docstring for Variable"""
-    
-    def __init__(self, name, lb=None, ub=None, domain=DEFAULT_DOMAIN):
-        super(Variable, self).__init__()
-        self._name = name
-        self._lb = lb
-        self._ub = ub
-        self._domain = domain
-        SymbolCatalog().register(self, self._symbol_options)
+    def problem(self):
+        return PyomoProblem(self)
 
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def domain(self):
-        return self._domain
-        
-    @property
-    def lb(self):
-        return self._lb
-
-    @property
-    def ub(self):
-        return self._ub
-
-
-    def __call__(self, index=None):
-        return SymbolCatalog().get(self, index)
-
-    def _symbol_options(self, index):
-        if index is None:
-            name = self.name
-        else:
-            name = '{}[{}]'.format(self.name, index)
-
-        lb = self._lb(index) if callable(self._lb) else self._lb
-        ub = self._ub(index) if callable(self._ub) else self._ub
-
-        return dict(name=name, bounds=(lb, ub), domain=self.domain)
-
-
-    def replace_symbols(self, data, indices):
-        for index, symbol in indices:
-            if symbol in data:
-                SymbolCatalog().set(self, index, data[symbol])
-
-
-    def constraint_func(self, index):
-        # Not used in this implementation, but in principle a Variable may produce constraints
-        # which should be added to to any optimization problem where the variable is used.
-        # This was used to produce upper and lower bounds in the previous implementation 
-        # which used sympy symbols instead of Pyomo variables.
-        #
-        # It is still used in the subclass PiecewiseAffineArg, by the way.
-        #
-        # I'm leaving it in here in case someone, someday implements some other
-        # optimization engine that needs this.
-        return set()
-
-
-
-class PiecewiseAffineArg(Variable):
-    """docstring for Variable"""
-    def __init__(self, name, points):
-        super(PiecewiseAffineArg, self).__init__(name)
-        self.points = points
-        SymbolCatalog().register(self, self._symbol_options)
-
-    def __call__(self, index=None):
-        return self.weighted_sum(index)
-
-    def weighted_sum(self, index):
-        return sum([point * weight for point, weight in zip(self.points, self.weights(index))])
-
-    def weights(self, index):
-        cat = SymbolCatalog()
-        return tuple(cat.get(self, (index, point)) for point in self.points)
-
-    def _symbol_options(self, (index, point)):
-        if index is None:
-            name = '{}_{}'.format(self.name, point)
-        else:
-            name = '{}_{}[{}]'.format(self.name, point, index)
-
-        return dict(name=name, bounds=(0, 1), domain=Domain.real)
-    
-    def replace_symbols(self, data, indices):
-        for index, symbol in indices:
-            for point in self.points:
-                if symbol in data:
-                    SymbolCatalog().set(self, (index, point), data[symbol])
-
-    def constraint_func(self, index):
-        weights = self.weights(index)
-        constraints = (
-            SOS2(weights, desc='Weights of points in piecewise affine expression'),
-            Constraint(sum(weights) == 1, desc='Sum of weights in piecewise affine expression'))
-        return constraints
-
-
-class Problem(object):
-    """An optimization problem"""
-    def __init__(self):
-        super(Problem, self).__init__()
-        self.constraints = set()
-        self.objective = None
-        self._solver_order = DEFAULT_SOLVER_ORDER
+class PyomoProblem(Problem):
+    """docstring for PyomoProblem"""
+    def __init__(self, engine):
+        super(PyomoProblem, self).__init__()
+        self._engine = engine
         self._solver = None
 
-    _solver_funcs = {
-        'gurobi': lambda: SolverFactory('gurobi', solver_io='python'),
-        'cbc': lambda: SolverFactory('cbc', solver_io='nl')
-        }
-
-    def use_solver(self, *order):
-        self._solver_order = order
-
     def _get_solver(self):
-        if len(self._solver_order) == 0:
-            names = DEFAULT_SOLVER_ORDER
-        else:
-            names = self._solver_order
+        solver_order = self._engine.options['solver_order']
 
-        for name in names:
+        for solver in solver_order:
             exceptions = []
             try:
-                return self._solver_funcs[name]()
+                return SolverFactory(solver['name'], solver_io=solver['solver_io'])
             except Exception, e:
-                exceptions.append({'solver_name': name, 'exception': str(e)})
+                exceptions.append({'solver': solver, 'exception': str(e)})
 
         raise RuntimeError('No solver could be initialized. More info: {}'.format(exceptions))
 
     def solve(self):
-        """Try to solve the optimization problem"""
 
         if self._solver is None:
             self._solver = self._get_solver()
         
         model = pyoenv.ConcreteModel()
 
-        for v in SymbolCatalog().variables():
+        for v in self._engine.variables():
             setattr(model, v.name, v)
 
         for i, c in enumerate(self.constraints):
@@ -225,6 +130,7 @@ class Problem(object):
                 raise NotImplementedError()
 
             else:
+                print('--------', type(c))
                 raise NotImplementedError('Cannot handle constraint {}'.format(c))
 
         if isinstance(self.objective, Minimize):
@@ -241,5 +147,7 @@ class Problem(object):
             raise SolverError("pyomo solution status is '{0}'".format(result.Solution.Status))
 
         model.load(result)
+
+        return {v.name: v.value for v in self._engine.variables()}
 
 

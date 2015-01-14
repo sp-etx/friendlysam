@@ -9,7 +9,7 @@ import networkx as nx
 
 from friendlysam.parts import Part, Process, Cluster, Storage
 
-from friendlysam.optimization import Constraint
+from friendlysam.optimization.core import Constraint
 
 class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""

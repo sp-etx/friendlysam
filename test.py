@@ -1,8 +1,8 @@
 import itertools
-from friendlysam.parts import Process, Storage, ResourceNetwork
+from friendlysam.parts import Part, Process, Storage, ResourceNetwork
 import sympy
-import friendlysam.optimization as opt
-from friendlysam.optimization.pyomoengine import Problem
+from friendlysam.optimization.core import *
+from friendlysam.optimization.pyomoengine import PyomoEngine
 
 RESOURCE = 0
 
@@ -26,6 +26,30 @@ def main():
             activity = self.variable('activity', lb=0, ub=1)
             self.consumption[RESOURCE] = lambda t: activity(t) * b
 
+    class Model(Part):
+        """docstring for Model"""
+        def __init__(self):
+            super(Model, self).__init__()
+            self._engine = None
+
+        @property
+        def engine(self):
+            return self._engine
+        @engine.setter
+        def engine(self, value):
+            self._engine = value
+
+        @property
+        def model(self):
+            return self
+                
+        
+            
+
+    engine = PyomoEngine()
+    m = Model()
+    m.engine = engine
+
     n = 10
     prods = [Producer(10+i) for i in range(n)]
     conss = [Consumer(15-i) for i in range(n)]
@@ -45,13 +69,14 @@ def main():
 
 
     parts = prods + conss + stors + [netw]
+    m.add_part(netw)
 
     times = range(30)
 
-    prob = Problem()
+    prob = engine.problem()
     prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
-    prob.objective = opt.Maximize(sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)]))
-    prob.solve()
+    prob.objective = Maximize(sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)]))
+    print(prob.solve())
     # times = range(29)
     # prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
     # prob.objective = sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)])
