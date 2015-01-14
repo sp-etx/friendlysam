@@ -3,6 +3,7 @@
 from __future__ import division
 
 import friendlysam.optimization as opt
+from friendlysam.optimization.pyomoengine import Variable
 
 class Constrained(object):
     """docstring for Constrained"""
@@ -35,9 +36,9 @@ class Constrained(object):
         for v in self._variables:
             v.replace_symbols(data, indices)
 
-    def variable(self, *args, **kwargs):
-        variable = opt.Variable(*args, **kwargs)
-        variable.name = '{}.{}'.format(self.name, variable.name)
+    def variable(self, name, *args, **kwargs):
+        name = '{}.{}'.format(self.name, name)
+        variable = Variable(name, **kwargs)
         self._register_variable(variable)
         return variable
 

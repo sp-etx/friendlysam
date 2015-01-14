@@ -9,7 +9,7 @@ import networkx as nx
 
 from friendlysam.parts import Part, Process, Cluster, Storage
 
-from friendlysam.optimization import RelConstraint
+from friendlysam.optimization import Constraint
 
 class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""
@@ -89,7 +89,7 @@ class ResourceNetwork(Part):
         else:
             raise RuntimeError('node is not supported: ' + repr(node))
 
-        return RelConstraint(sympy.Eq(lhs, rhs), desc.format(self.resource, node))
+        return Constraint(lhs == rhs, desc.format(self.resource, node))
         
 
     def _all_balance_constraints(self, idx):

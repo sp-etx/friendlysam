@@ -5,266 +5,80 @@ logger = get_logger(__name__)
 
 import itertools
 
-import sympy
 from enum import Enum
 
-class SymbolError(Exception): pass
-
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-class SymbolFactory(object):
-    __metaclass__ = Singleton
-
-    def __init__(self):
-        super(SymbolFactory, self).__init__()
-        self._names = set()
-        self._counter = 0
-
-    def _unique_name(self, name):
-        if name is not None:
-            if name in self._names:
-                raise SymbolError('a symbol named {} already exists'.format(name))
-            elif name == '':
-                raise SymbolError('empty string is not an allowed symbol name')
-            elif not isinstance(name, str):
-                raise SymbolError('symbol name should be a string')
-
-        while name is None or name in self._names:
-            self._counter += 1
-            name = 'x{}'.format(self._counter)
-
-        self._names.add(name)
-
-        return name
-
-    def symbol(self, name=None):
-        name = self._unique_name(name)
-        symbol = sympy.Symbol(name)
-        return symbol
-
-
-class Variable(object):
-    """docstring for Variable"""
-    def __init__(self, name, lb=None, ub=None, integer=False):
-        super(Variable, self).__init__()
-        self.name = name
-        self.lb = lb
-        self.ub = ub
-        self.integer = integer
-        self._symbols = {}
-
-
-    def __call__(self, index=None):
-        if not index in self._symbols:
-            if index is None:
-                name = self.name
-            else:
-                name = '{}[{}]'.format(self.name, index)
-            self._symbols[index] = SymbolFactory().symbol(name)
-        return self._symbols[index]
-
-    def replace_symbols(self, data, indices):
-        for idx in indices:
-            if idx in self._symbols:
-                self._symbols[idx] = self.try_replace(self._symbols[idx], data)
-            
-    def constraint_func(self, index):
-        constraints = set()
-        if self.lb is not None:
-            constraints.add(RelConstraint(self.lb <= self(index), desc='Lower bound'))
-        if self.ub is not None:
-            constraints.add(RelConstraint(self(index) <= self.ub, 'Upper bound'))
-        if self.integer:
-            raise NotImplementedError()
-        return constraints
-
-    def try_replace(self, something, data):
-        return something.xreplace(data) if isinstance(something, sympy.Basic) else something
-
-
-class PiecewiseAffineArg(Variable):
-    """docstring for Variable"""
-    def __init__(self, name, points):
-        super(PiecewiseAffineArg, self).__init__(name)
-        self.points = points
-
-    def __call__(self, index=None):
-        return self.weighted_sum(index)
-
-    def weighted_sum(self, index):
-        return sum([point * weight for point, weight in zip(self.points, self.weights(index))])
-
-    def weights(self, index):
-        if not index in self._symbols:
-            self._symbols[index] = self._make_symbols(index)
-        return self._symbols[index]
-    
-
-    def _make_symbols(self, index):
-        if index is None:
-            return [sympy.Symbol('{}_{}'.format(self.name, i)) for i in self.points]
-        else:
-            return [sympy.Symbol('{}_{}[{}]'.format(self.name, i, index)) for i in self.points]
-
-    def replace_symbols(self, data, indices):
-        for idx in indices:
-            if idx in self._symbols:
-                self._symbols[idx] = [self.try_replace(s, data) for s in self._symbols[idx]]
-
-    def constraint_func(self, index):
-        weights = self.weights(index)
-        constraints = (
-            SOS2Constraint(weights, desc='Weights of points in piecewise affine expression'),
-            RelConstraint(
-                sympy.Eq(sum(weights), 1),
-                desc='Sum of weights in piecewise affine expression')
-            )
-        return constraints
+class Domain(Enum):
+    """docstring for Domain"""
+    real = 0
+    integer = 1
+    binary = 2
 
 
 class ConstraintError(Exception): pass
 
 
-class Constraint(object):
-    """docstring for Constraint"""
+class _ConstraintBase(object):
+    """docstring for _ConstraintBase"""
     def __init__(self, desc=None):
-        super(Constraint, self).__init__()
+        super(_ConstraintBase, self).__init__()
         self.desc = desc
 
-    def _with_desc(self, s):
+    def _add_desc(self, s):
         if self.desc is None:
             return s
         else:
             return '{} ({})'.format(s, self.desc)
         
 
-class RelConstraint(Constraint):
-    """docstring for RelConstraint"""
+class Constraint(_ConstraintBase):
+    """docstring for Constraint"""
     def __init__(self, expr, desc=None):
-        super(RelConstraint, self).__init__(desc)
+        super(Constraint, self).__init__(desc)
         self.expr = expr
 
     def __str__(self):
-        return self._with_desc(str(self.expr))
+        return self._add_desc(str(self.expr))
 
 
-class SOS1Constraint(Constraint):
-    """docstring for SOS1Constraint"""
-    def __init__(self, symbols, desc=None):
-        super(SOS1Constraint, self).__init__(desc)
-        self._symbols = set(symbols)
-
-    def __str__(self):
-        return self._with_desc('SOS1{}'.format(tuple(self._symbols)))
-
-    @property
-    def symbols(self):
-        return self._symbols
-
-class SOS2Constraint(Constraint):
-    """docstring for SOS2Constraint"""
-    def __init__(self, symbols, desc=None):
-        super(SOS2Constraint, self).__init__(desc)
+class _SOS(_ConstraintBase):
+    """docstring for _SOS"""
+    def __init__(self, sostype, symbols, desc=None):
+        super(_SOS, self).__init__(desc)
         if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
+        self._sostype = sostype
 
     def __str__(self):
-        return self._with_desc('SOS2{}'.format(self._symbols))
+        return self._add_desc('SOS{}{}'.format(self._sostype, self._symbols))
 
     @property
     def symbols(self):
         return self._symbols
 
 
-class Sense(Enum):
-    """The sense of an optimization objective"""
-    minimize = 1
-    maximize = 2
-        
-
-class Problem(object):
-    """An optimization problem"""
-    def __init__(self):
-        super(Problem, self).__init__()
-        self.sense = Sense.minimize
-        self.constraints = set()
-        self.objective = None
-        self.solver = None
+class SOS1(_SOS):
+    """docstring for SOS1"""
+    def __init__(self, symbols, desc=None):
+        super(SOS1, self).__init__(1, symbols, desc=desc)
 
 
-    @property
-    def variables(self):
-        relations = itertools.chain(
-            filter(lambda c: isinstance(c, sympy.Rel), self.constraints),
-            [c.expr for c in filter(lambda c: isinstance(c, RelConstraint), self.constraints)])
-        expressions = set()
-        expressions.update(relations)
-        expressions.add(self.objective)
-        symbols = set()
-        for e in expressions:
-            symbols.update(e.atoms(sympy.Symbol))
-        return symbols
-
-    def solve(self):
-        """Try to solve the optimization problem"""
-
-        if self.solver is None:
-            self.solver = get_solver()
-
-        self.constraints.discard(True)
-        self.constraints.discard(sympy.true)
-
-        if False in self.constraints or sympy.false in self.constraints:
-            raise ConstraintError('The problem cannot be solved because some constraint is False.')
-
-        self.solution = self.solver.solve(self)
-
-    def evaluate(self, expr):
-        """Evaluate an expression in the optimal point of the optimization problem"""
-        raise NotImplementedError()
-
-# import random
-# import time
+class SOS2(_SOS):
+    """docstring for SOS2"""
+    def __init__(self, symbols, desc=None):
+        super(SOS2, self).__init__(2, symbols, desc=desc)
 
 
-# if __name__ == '__main__':
-    
-#     p = Problem()
-#     x, y, z = sympy.symbols('x y z')
-#     p.constraints.add(x - y*y >= 3)
-#     p.objective = x + 0.5*y
-#     p.solver = GurobiSolver()
-#     p.solve()
-#     print(p._solution)
-#     # t0 = time.time()
-#     # m = gurobipy.Model('aoeu')
-#     # qe = gurobipy.QuadExpr()
+class _Objective(object):
+    """docstring for _Objective"""
+    def __init__(self, expr):
+        super(_Objective, self).__init__()
+        self.expr = expr
 
-#     # N = 1
-#     # gvars = [m.addVar(name='x'+str(n)) for n in range(N)]
-#     # m.update()
-    
-#     # for i in range(1):
-#     #     x = gvars[:]
-#     #     y = gvars[:]
-#     #     random.shuffle(x)
-#     #     random.shuffle(y)
-#     #     qe.addTerms(list(range(2,N+2)), x, y)
-#     #     print(qe == 0)
-#     #     m.addConstr(qe)
-#     #     m.update()
-#     #     m.setObjective(x[0]+3)
-#     #     m.optimize()
-#     #     for c in m.getQConstrs():
-#     #         print(c)
-#     #     print(m.getQConstrs(), m.getConstrs())
+class Maximize(_Objective):
+    """docstring for Maximize"""
+    pass
 
-#     # print(time.time()-t0)
-
-from friendlysam.optimization.solvers import get_solver
+class Minimize(_Objective):
+    """docstring for Minimize"""
+    pass
