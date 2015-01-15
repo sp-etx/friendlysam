@@ -14,8 +14,8 @@ from friendlysam.optimization.core import *
 
 DEFAULT_OPTIONS = dict(
     solver_order=[
-        dict(name='cbc', solver_io='nl'),
-        dict(name='gurobi', solver_io='python')
+        dict(name='gurobi', solver_io='python'),
+        dict(name='cbc', solver_io='nl')
     ])
 
     
@@ -95,25 +95,21 @@ class PyomoProblem(Problem):
     def __init__(self, engine):
         super(PyomoProblem, self).__init__()
         self._engine = engine
-        self._solver = None
 
-    def _get_solver(self):
+    def _get_and_apply_solver(self, problem):
         solver_order = self._engine.options['solver_order']
 
         for solver in solver_order:
             exceptions = []
             try:
-                return SolverFactory(solver['name'], solver_io=solver['solver_io'])
+                solver = SolverFactory(solver['name'], solver_io=solver['solver_io'])
+                return solver.solve(problem)
             except Exception, e:
                 exceptions.append({'solver': solver, 'exception': str(e)})
 
-        raise RuntimeError('No solver could be initialized. More info: {}'.format(exceptions))
+        raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
 
-    def solve(self):
-
-        if self._solver is None:
-            self._solver = self._get_solver()
-        
+    def solve(self):        
         model = pyoenv.ConcreteModel()
 
         for v in self._engine.variables():
@@ -141,7 +137,7 @@ class PyomoProblem(Problem):
 
         model.preprocess()
 
-        result = self._solver.solve(model)
+        result = self._get_and_apply_solver(model)
 
         if not result.Solution.Status == pyomo.opt.SolutionStatus.optimal:
             raise SolverError("pyomo solution status is '{0}'".format(result.Solution.Status))
