@@ -13,7 +13,7 @@ class Cluster(Part):
 
     def net_consumption(self, res, t):
         terms = list()
-        for part in self.parts:
+        for part in self.parts(recursion_limit=0):
             if isinstance(part, Cluster):
                 terms.append(part.net_consumption(res, t))
             elif isinstance(e, Storage):

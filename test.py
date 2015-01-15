@@ -57,7 +57,7 @@ def main():
     prob = engine.problem()
     prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
     prob.objective = Maximize(sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)]))
-    print(prob.solve())
+    prob.solve()
     
 if __name__ == '__main__':
     main()

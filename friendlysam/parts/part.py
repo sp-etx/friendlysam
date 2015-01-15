@@ -12,7 +12,7 @@ class Part(object):
 
     def __init__(self, name=None):
         super(Part, self).__init__()
-        self.constraint_funcs = set()
+        self._constraint_funcs = set()
         self._model = None
         Part._part_counter += 1
         
@@ -26,7 +26,7 @@ class Part(object):
         return self.name
 
     def __getitem__(self, name):
-        matches = [part for part in self.all_decendants if part.name == name]
+        matches = [part for part in self.parts() if part.name == name]
         if len(matches) == 1:
             return matches[0]
         elif len(matches) == 0:
@@ -38,7 +38,7 @@ class Part(object):
 
     def __iadd__(self, other):
         if callable(other):
-            self.constraint_funcs.add(other)
+            self._constraint_funcs.add(other)
         else:
             raise ValueError("'{}' cannot be added to '{}'".format(other, self))
 
@@ -57,21 +57,26 @@ class Part(object):
     @model.setter
     def model(self, value):
         self._model = value
-        for p in self.parts:
+        for p in self.parts(0):
             p.model = value
     
-    @property
-    def parts(self):
-        return self._parts
+
+    def parts(self, recursion_limit=None):
+        parts = set()
+        if recursion_limit is None or recursion_limit >= 0:
+            parts.update(self._parts)
+
+        next_level = None if recursion_limit is None else (recursion_limit - 1)
+        all_parts = parts.union(*(subpart.parts(next_level) for subpart in parts))
+
+        return all_parts
 
     def add_part(self, p):
-        self._parts.add(p)
-        
-        if self in self.all_decendants:
-            self._parts.remove(p)
+        if self in p.parts():
             raise ValueError('cannot add ' + str(p) + ' to ' + str(self) +
                 ' because it would generate a cyclic relationship')
 
+        self._parts.add(p)
         p.model = self.model
 
 
@@ -79,23 +84,18 @@ class Part(object):
         for p in parts:
             self.add_part(p)
 
-    @property
-    def all_decendants(self):
-        return self.parts.union(
-            *[p.all_decendants for p in self.parts])
-
 
     def variable(self, name=None, **kwargs):
         name = '{}.{}'.format(self.name, name)
         variable = Variable(name=name, **kwargs)
-        self.constraint_funcs.add(variable.constraint_func)
+        self._constraint_funcs.add(variable.constraint_func)
         variable.owner = self
         return variable
 
 
-    def constraints(self, indices=(None,)):
+    def constraints(self, indices=(None,), recursion_limit=None):
         constraints = set()
-        for func in self.constraint_funcs:
+        for func in self._constraint_funcs:
             for index in indices:
                 func_output = func(index)
                 try:
@@ -104,7 +104,11 @@ class Part(object):
                     raise opt.ConstraintError(
                         "the constraint function '{}' did not return an iterable".format(func))
 
-        return constraints
+        # Subtract 1 from recursion_limit. This means we get only this part's constraints
+        # if recursion_limit=0, etc. It is probably the expected behavior.
+        recursion_limit = recursion_limit if recursion_limit is None else (recursion_limit - 1)
+        subparts = self.parts(recursion_limit)
+        return constraints.union(*(p.constraints(indices, recursion_limit=0) for p in subparts))
 
 
 
