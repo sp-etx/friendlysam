@@ -40,11 +40,13 @@ class ResourceNetwork(Part):
     def add_edge(self, n1, n2, bidirectional=False):
         edges = self._graph.edges()
         nodes = self._graph.nodes()
+
+        if not n1 in nodes:
+            self.add_part(n1)
+
+        if not n2 in nodes:
+            self.add_part(n2)
             
-        if not (n1 in nodes and n2 in nodes):
-            raise ValueError(
-                'At least one of the nodes is not in the network.')
-        
         if not (n1, n2) in edges:
             self._graph.add_edge(n1, n2)
             name = 'flow ({} --> {})'.format(n1, n2)
