@@ -61,12 +61,12 @@ class Part(object):
             p.model = value
     
 
-    def parts(self, recursion_limit=None):
+    def parts(self, depth='all'):
         parts = set()
-        if recursion_limit is None or recursion_limit >= 0:
+        if depth is 'all' or depth >= 0:
             parts.update(self._parts)
 
-        next_level = None if recursion_limit is None else (recursion_limit - 1)
+        next_level = 'all' if depth is 'all' else (depth - 1)
         all_parts = parts.union(*(subpart.parts(next_level) for subpart in parts))
 
         return all_parts
@@ -93,7 +93,7 @@ class Part(object):
         return variable
 
 
-    def constraints(self, indices=(None,), recursion_limit=None):
+    def constraints(self, indices=(None,), depth='all'):
         constraints = set()
         for func in self._constraint_funcs:
             for index in indices:
@@ -104,11 +104,11 @@ class Part(object):
                     raise opt.ConstraintError(
                         "the constraint function '{}' did not return an iterable".format(func))
 
-        # Subtract 1 from recursion_limit. This means we get only this part's constraints
-        # if recursion_limit=0, etc. It is probably the expected behavior.
-        recursion_limit = recursion_limit if recursion_limit is None else (recursion_limit - 1)
-        subparts = self.parts(recursion_limit)
-        return constraints.union(*(p.constraints(indices, recursion_limit=0) for p in subparts))
+        # Subtract 1 from depth. This means we get only this part's constraints
+        # if depth=0, etc. It is probably the expected behavior.
+        depth = depth if depth is 'all' else (depth - 1)
+        subparts = self.parts(depth)
+        return constraints.union(*(p.constraints(indices, depth=0) for p in subparts))
 
 
 
