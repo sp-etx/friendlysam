@@ -1,5 +1,5 @@
 import itertools
-from friendlysam.parts import Part, Process, Storage, ResourceNetwork
+from friendlysam.parts import Model, Part, Process, Storage, ResourceNetwork
 import sympy
 from friendlysam.optimization.core import *
 from friendlysam.optimization.pyomoengine import PyomoEngine
@@ -26,25 +26,6 @@ def main():
             activity = self.variable('activity', lb=0, ub=1)
             self.consumption[RESOURCE] = lambda t: activity(t) * b
 
-    class Model(Part):
-        """docstring for Model"""
-        def __init__(self):
-            super(Model, self).__init__()
-            self._engine = None
-
-        @property
-        def engine(self):
-            return self._engine
-        @engine.setter
-        def engine(self, value):
-            self._engine = value
-
-        @property
-        def model(self):
-            return self
-                
-        
-            
 
     engine = PyomoEngine()
     m = Model()
@@ -76,7 +57,7 @@ def main():
     prob = engine.problem()
     prob.constraints = set(itertools.chain(*[p.constraints(times) for p in parts]))
     prob.objective = Maximize(sum([conss[i].consumption[RESOURCE](t) for i, t in itertools.product(range(n), times)]))
-    prob.solve()
+    print(prob.solve())
     
 if __name__ == '__main__':
     main()

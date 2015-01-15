@@ -87,17 +87,18 @@ class PyomoEngine(object):
     def delete_variable(self, variable, index):
         del self._variables[variable, index]
 
-    def problem(self):
-        return PyomoProblem(self)
+    def problem(self, **kwargs):
+        if 'engine' in kwargs:
+            raise RuntimeError('Engine is implicitly specified already.')
+        kwargs['engine'] = self
+        return PyomoProblem(**kwargs)
+
 
 class PyomoProblem(Problem):
     """docstring for PyomoProblem"""
-    def __init__(self, engine):
-        super(PyomoProblem, self).__init__()
-        self._engine = engine
 
     def _get_and_apply_solver(self, problem):
-        solver_order = self._engine.options['solver_order']
+        solver_order = self.engine.options['solver_order']
 
         for solver in solver_order:
             exceptions = []
@@ -112,7 +113,7 @@ class PyomoProblem(Problem):
     def solve(self):        
         model = pyoenv.ConcreteModel()
 
-        for v in self._engine.variables():
+        for v in self.engine.variables():
             setattr(model, v.name, v)
 
         for i, c in enumerate(self.constraints):
@@ -126,7 +127,6 @@ class PyomoProblem(Problem):
                 raise NotImplementedError()
 
             else:
-                print('--------', type(c))
                 raise NotImplementedError('Cannot handle constraint {}'.format(c))
 
         if isinstance(self.objective, Minimize):
@@ -144,6 +144,6 @@ class PyomoProblem(Problem):
 
         model.load(result)
 
-        return {v.name: v.value for v in self._engine.variables()}
+        return {v.name: v.value for v in self.engine.variables()}
 
 

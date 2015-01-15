@@ -188,11 +188,18 @@ class Variable(object):
 
 class Problem(object):
     """An optimization problem"""
-    def __init__(self):
+    def __init__(self, engine=None, constraints=None, objective=None):
         super(Problem, self).__init__()
-        self.constraints = set()
-        self.objective = None
-        
+        self.constraints = set() if constraints is None else constraints
+        self.objective = objective
+        self.engine = engine
+
+    @property
+    def engine(self):
+        return self._engine
+    @engine.setter
+    def engine(self, value):
+        self._engine = value
 
     def solve(self):
         """Try to solve the optimization problem"""
