@@ -76,6 +76,7 @@ class PyomoEngine(object):
 
             symbol = pyoenv.Var(**options)
             symbol.name = name
+            symbol._friendlysam_index = (variable, index)
 
             self._variables[variable, index] = symbol
 
@@ -144,6 +145,6 @@ class PyomoProblem(Problem):
 
         model.load(result)
 
-        return {v.name: v.value for v in self.engine.variables()}
+        return {v._friendlysam_index: v.value for v in self.engine.variables()}
 
 

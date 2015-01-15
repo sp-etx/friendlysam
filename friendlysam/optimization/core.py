@@ -129,8 +129,7 @@ class Variable(object):
         return self._value_or_symbol(*index)
 
     def take_value(self, solution, *index):
-        symbol = self._value_or_symbol(*index)
-        self[index] = solution[symbol]
+        self[index] = solution[self, index]
 
     def __setitem__(self, index, value):
         self.engine.delete_variable(self, index)
