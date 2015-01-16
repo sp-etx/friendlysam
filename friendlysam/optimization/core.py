@@ -6,6 +6,7 @@ logger = get_logger(__name__)
 import itertools
 
 from enum import Enum
+from friendlysam import NOINDEX
 
 class Domain(Enum):
     """docstring for Domain"""
@@ -14,7 +15,6 @@ class Domain(Enum):
     binary = 2
 
 DEFAULT_DOMAIN = Domain.real
-
 
 class ConstraintError(Exception): pass
 
@@ -102,7 +102,7 @@ class Variable(object):
         return self.owner.engine
 
     def name(self, index):
-        if index is None:
+        if index is NOINDEX:
             return self._name
         else:
             return '{}[{}]'.format(self._name, index)
@@ -125,21 +125,21 @@ class Variable(object):
         else:
             return self.engine.get_variable(self, index)
         
-    def __call__(self, index=None):
+    def __call__(self, index=NOINDEX):
         return self._value_or_symbol(index)
 
-    def take_value(self, solution, index=None):
+    def take_value(self, solution, index=NOINDEX):
         if not index in self._values:
             self[index] = solution[self, index]
 
-    def set(self, value, index=None):
+    def set(self, value, index=NOINDEX):
         self.engine.delete_variable(self, index)
         self._values[index] = value
 
     def __setitem__(self, index, value):
         self.set(value, index)
 
-    def constraint_func(self, index):
+    def constraint_func(self, index=NOINDEX):
         # Not used in this implementation, but in principle a Variable may produce constraints
         # which should be added to to any optimization problem where the variable is used.
         # This was used to produce upper and lower bounds in the previous implementation 
