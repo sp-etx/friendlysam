@@ -13,16 +13,16 @@ class Cluster(Part):
 
     def net_consumption(self, res, t):
         terms = list()
-        for part in self.parts(recursion_limit=0):
+        for part in self.parts(depth=0):
             if isinstance(part, Cluster):
                 terms.append(part.net_consumption(res, t))
-            elif isinstance(e, Storage):
+            elif isinstance(part, Storage):
                 if part.resource is res:
                     terms.append(part.accumulation(t))
             elif isinstance(part, Process):
-                if res in e.inputs:
+                if res in part.inputs:
                     terms.append(part.consumption[res](t))
-                if res in e.outputs:
+                if res in part.outputs:
                     terms.append(-part.production[res](t))
             else:
                 raise RuntimeError('net consumption is not supported for {}'.format(part))
