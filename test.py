@@ -83,6 +83,7 @@ def main():
     
     prob.objective = Minimize(sum(p1.cost(t) + p2.cost(t) for t in times))
     solution = prob.solve()
+
     
     for t in times:
         c.activity.take_value(solution, t)
