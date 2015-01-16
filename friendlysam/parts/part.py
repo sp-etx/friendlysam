@@ -61,18 +61,18 @@ class Part(object):
             p.model = value
     
 
-    def parts(self, depth='all'):
+    def parts(self, depth):
         parts = set()
-        if depth is 'all' or depth >= 0:
+        depth = float(depth)
+        if depth >= 0:
             parts.update(self._parts)
 
-        next_level = 'all' if depth is 'all' else (depth - 1)
-        all_parts = parts.union(*(subpart.parts(next_level) for subpart in parts))
+        all_parts = parts.union(*(subpart.parts(depth - 1) for subpart in parts))
 
         return all_parts
 
     def add_part(self, p):
-        if self in p.parts():
+        if self in p.parts('inf'):
             raise ValueError('cannot add ' + str(p) + ' to ' + str(self) +
                 ' because it would generate a cyclic relationship')
 
@@ -93,24 +93,26 @@ class Part(object):
         return variable
 
 
-    def constraints(self, indices=(None,), depth='all'):
+    def constraints(self, depth, *indices):
         constraints = set()
+        def add(func_output):
+            try:
+                constraints.update(func_output)
+            except TypeError: # not iterable
+                constraints.add(func_output)
+
         for func in self._constraint_funcs:
-            for index in indices:
-                func_output = func(index)
-                try:
-                    constraints.update(func_output)
-                except TypeError: # not iterable
-                    raise opt.ConstraintError(
-                        "the constraint function '{}' did not return an iterable".format(func))
+            if len(indices) == 0:
+                add(func())
+            else:
+                for index in indices:
+                    add(func(index))
 
         # Subtract 1 from depth. This means we get only this part's constraints
         # if depth=0, etc. It is probably the expected behavior.
-        depth = depth if depth is 'all' else (depth - 1)
+        depth = float(depth) - 1
         subparts = self.parts(depth)
-        return constraints.union(*(p.constraints(indices, depth=0) for p in subparts))
-
-
+        return constraints.union(*[p.constraints(0, *indices) for p in subparts])
 
 
 class Model(Part):

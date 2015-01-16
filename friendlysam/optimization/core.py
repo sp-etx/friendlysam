@@ -119,17 +119,18 @@ class Variable(object):
     def ub(self):
         return self._ub
 
-    def _value_or_symbol(self, *index):
+    def _value_or_symbol(self, index):
         if index in self._values:
             return self._values[index]
         else:
             return self.engine.get_variable(self, index)
         
-    def __call__(self, *index):
-        return self._value_or_symbol(*index)
+    def __call__(self, index=None):
+        return self._value_or_symbol(index)
 
-    def take_value(self, solution, *index):
-        self[index] = solution[self, index]
+    def take_value(self, solution, index=None):
+        if not index in self._values:
+            self[index] = solution[self, index]
 
     def __setitem__(self, index, value):
         self.engine.delete_variable(self, index)
