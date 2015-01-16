@@ -16,6 +16,30 @@ class Node(Part):
         self.accumulation = dict()
 
 
+def _get_aggr_func(owner, attr_name, resource):
+    def aggregation(*indices):
+
+        # The following logic lets the aggregation function work with or without
+        # the 'index' argument.
+        if len(indices) > 1:
+            raise TypeError("aggregation '{}' takes at most 1 argument ({} given)".format(
+                attr_name, len(indices)))
+
+        terms = []
+        for part in owner.parts(0):
+            func_dict = getattr(part, attr_name)
+            if resource in func_dict:
+                func = func_dict[resource]
+                if len(indices) == 0:
+                    term = func()
+                else:
+                    term = func(indices[0])
+                terms.append(term)
+
+        return sum(terms)
+
+    return aggregation
+
 class Cluster(Node):
     """docstring for Cluster"""
     
@@ -34,18 +58,9 @@ class Cluster(Node):
 
         def __getitem__(self, resource):
             if not resource in self._dict:
-                self._dict[resource] = self._make_func(resource)
+                self._dict[resource] = _get_aggr_func(self._owner, self._attr_name, resource)
             return self._dict[resource]
 
-        def _make_func(self, resource):
-            def func(index):
-                terms = []
-                for part in self._owner.parts(0):
-                    attr = getattr(part, self._attr_name)
-                    if resource in attr:
-                        terms.append(attr[resource](index))
-                return sum(terms)
-            return func
 
     def __init__(self, *parts, **kwargs):
         super(Cluster, self).__init__(**kwargs)
