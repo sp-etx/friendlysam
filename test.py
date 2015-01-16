@@ -1,13 +1,12 @@
 import itertools
-from friendlysam.parts import Model, Part, Process, Storage, Cluster, ResourceNetwork
-import sympy
+from friendlysam.model import Model, Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization.core import *
 from friendlysam.optimization.pyomoengine import PyomoEngine
 
 RESOURCE = 0
 
 def main():
-    class Producer(Process):
+    class Producer(Node):
         """docstring for Producer"""
         def __init__(self, param, **kwargs):
             super(Producer, self).__init__(**kwargs)
@@ -19,7 +18,7 @@ def main():
             self.cost = lambda t: param(t) * self.activity(t)
 
 
-    class Consumer(Process):
+    class Consumer(Node):
         """docstring for Consumer"""
         def __init__(self, param, **kwargs):
             super(Consumer, self).__init__(**kwargs)
@@ -28,7 +27,7 @@ def main():
             self.consumption[RESOURCE] = lambda t: self.activity(t)
             cons = self.consumption[RESOURCE]
 
-            self += lambda t: (Constraint(cons(t) + cons(t+1) >= param(t)),)
+            self += lambda t: (Constraint(cons(t) >= param(t)),)
 
 
     engine = PyomoEngine()
