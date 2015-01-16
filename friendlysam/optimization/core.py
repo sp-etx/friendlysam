@@ -132,9 +132,12 @@ class Variable(object):
         if not index in self._values:
             self[index] = solution[self, index]
 
-    def __setitem__(self, index, value):
+    def set(self, value, index=None):
         self.engine.delete_variable(self, index)
         self._values[index] = value
+
+    def __setitem__(self, index, value):
+        self.set(value, index)
 
     def constraint_func(self, index):
         # Not used in this implementation, but in principle a Variable may produce constraints
