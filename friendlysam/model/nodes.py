@@ -102,6 +102,10 @@ class ResourceNetwork(Node):
 
         self.flows = dict()
 
+        self.consumption[resource] = _get_aggr_func(self, 'consumption', resource)
+        self.production[resource] = _get_aggr_func(self, 'production', resource)
+        self.accumulation[resource] = _get_aggr_func(self, 'accumulation', resource)
+
         self += self._all_balance_constraints
 
     @property
