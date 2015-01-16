@@ -6,6 +6,7 @@ import networkx as nx
 
 from friendlysam.optimization.core import Constraint
 from friendlysam.model import Part
+from friendlysam import NOINDEX
 
 class Node(Part):
     """docstring for Node"""
@@ -17,23 +18,14 @@ class Node(Part):
 
 
 def _get_aggr_func(owner, attr_name, resource):
-    def aggregation(*indices):
-
-        # The following logic lets the aggregation function work with or without
-        # the 'index' argument.
-        if len(indices) > 1:
-            raise TypeError("aggregation '{}' takes at most 1 argument ({} given)".format(
-                attr_name, len(indices)))
+    def aggregation(index=NOINDEX):
 
         terms = []
         for part in owner.parts(0):
             func_dict = getattr(part, attr_name)
             if resource in func_dict:
                 func = func_dict[resource]
-                if len(indices) == 0:
-                    term = func()
-                else:
-                    term = func(indices[0])
+                term = func() if index is NOINDEX else func(index)
                 terms.append(term)
 
         return sum(terms)
