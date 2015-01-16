@@ -86,7 +86,10 @@ class PyomoEngine(object):
         return self._variables.values()
 
     def delete_variable(self, variable, index):
-        del self._variables[variable, index]
+        try:
+            del self._variables[variable, index]
+        except KeyError:
+            pass
 
     def problem(self, **kwargs):
         if 'engine' in kwargs:
