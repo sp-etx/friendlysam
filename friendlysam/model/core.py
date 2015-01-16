@@ -3,7 +3,6 @@
 from __future__ import division
 
 import friendlysam.optimization as opt
-from friendlysam.optimization.pyomoengine import Variable
 
 class Part(object):
     """docstring for Part"""
