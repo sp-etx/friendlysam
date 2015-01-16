@@ -2,29 +2,43 @@
 
 from __future__ import division
 
-from friendlysam.parts import Part, Process, Storage
-
+from friendlysam.parts import Part
 
 class Cluster(Part):
     """docstring for Cluster"""
+    
+    class ClusterDict(object):
+        """docstring for ClusterDict"""
+        def __init__(self, owner, attr_name):
+            super(Cluster.ClusterDict, self).__init__()
+            self._owner = owner
+            self._attr_name = attr_name
+            self._dict = {}
+
+        def __contains__(self, resource):
+            for part in self._owner.parts(0):
+                if hasattr(part, self._attr_name) and resource in getattr(part, self._attr_name):
+                    return True
+
+        def __getitem__(self, resource):
+            if not resource in self._dict:
+                self._dict[resource] = self._make_func(resource)
+            return self._dict[resource]
+
+        def _make_func(self, resource):
+            def func(index):
+                terms = []
+                for part in self._owner.parts(0):
+                    attr = getattr(part, self._attr_name)
+                    if resource in attr:
+                        terms.append(attr[resource](index))
+                return sum(terms)
+            return func
+
     def __init__(self, *parts, **kwargs):
         super(Cluster, self).__init__(**kwargs)
         self.add_parts(*parts)
 
-    def net_consumption(self, res, t):
-        terms = list()
-        for part in self.parts(depth=0):
-            if isinstance(part, Cluster):
-                terms.append(part.net_consumption(res, t))
-            elif isinstance(part, Storage):
-                if part.resource is res:
-                    terms.append(part.accumulation(t))
-            elif isinstance(part, Process):
-                if res in part.inputs:
-                    terms.append(part.consumption[res](t))
-                if res in part.outputs:
-                    terms.append(-part.production[res](t))
-            else:
-                raise RuntimeError('net consumption is not supported for {}'.format(part))
-
-        return sum(terms)
+        self.consumption = Cluster.ClusterDict(self, 'consumption')
+        self.production = Cluster.ClusterDict(self, 'production')
+        self.accumulation = Cluster.ClusterDict(self, 'accumulation')

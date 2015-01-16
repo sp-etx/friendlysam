@@ -2,10 +2,10 @@
 
 from __future__ import division
 
-from friendlysam.parts import Part
+from friendlysam.parts import Process
 
 
-class Storage(Part):
+class Storage(Process):
     """docstring for Storage"""
     def __init__(self, resource, capacity=None, maxchange=None, **kwargs):
         super(Storage, self).__init__(**kwargs)
@@ -14,22 +14,12 @@ class Storage(Part):
         self.maxchange = maxchange
 
         self.volume = self.variable('volume', lb=0., ub=capacity)
+        self.accumulation[resource] = lambda t: self.volume(t+1) - self.volume(t)
 
         self += self._maxchange_constraints
 
-    def accumulation(self, t):
-        return self.volume(t+1) - self.volume(t)
-
-    @property
-    def inputs(self):
-        return (self.resource,)
-
-    @property
-    def outputs(self):
-        return (self.resource,)
-
     def _maxchange_constraints(self, t):
-        acc, maxchange = self.accumulation(t), self.maxchange
+        acc, maxchange = self.accumulation[self.resource](t), self.maxchange
         if maxchange is None:
             return ()
         return (

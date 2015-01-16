@@ -10,14 +10,7 @@ class Process(Part):
         super(Process, self).__init__(**kwargs)
         self.consumption = dict()
         self.production = dict()
-        
-    @property
-    def inputs(self):
-        return self.consumption.keys()
-
-    @property
-    def outputs(self):
-        return self.production.keys()
+        self.accumulation = dict()
 
 # class PiecewiseAffineProcess(Process):
 #     """docstring for PiecewiseAffineProcess"""

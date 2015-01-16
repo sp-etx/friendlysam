@@ -7,7 +7,7 @@ import itertools
 import sympy
 import networkx as nx
 
-from friendlysam.parts import Part, Process, Cluster, Storage
+from friendlysam.parts import Part
 
 from friendlysam.optimization.core import Constraint
 
@@ -55,46 +55,31 @@ class ResourceNetwork(Part):
         if bidirectional and (n2, n1) not in edges:
             self.add_edge(n2, n1)
 
-    def _node_balance_constraint(self, node, t):
+    def _node_balance_constraint(self, node, index):
         in_edges = self._graph.in_edges(nbunch=[node])
         out_edges = self._graph.out_edges(nbunch=[node])
-        inflow = sum([self.flows[e](t) for e in in_edges])
-        outflow = sum([self.flows[e](t) for e in out_edges])
+        inflow = sum([self.flows[edge](index) for edge in in_edges])
+        outflow = sum([self.flows[edge](index) for edge in out_edges])
 
         desc = 'Balance constraint ({}) for {}'
 
-        if isinstance(node, Cluster):
-            lhs = inflow
-            rhs = outflow + node.net_consumption(self.resource, t)
+        resource = self.resource
 
-        elif isinstance(node, Storage):
-            if not node.resource is self.resource:
-                return None
-            else:
-                lhs = inflow
-                rhs = outflow + node.accumulation(t)
-        
-        elif isinstance(node, Process):
-            if self.resource in node.inputs:
-                consumption = node.consumption[self.resource](t)
-            else:
-                consumption = 0
+        lhs = inflow
+        rhs = outflow
 
-            if self.resource in node.outputs:
-                production = node.production[self.resource](t)
-            else:
-                production = 0
+        if resource in node.production:
+            lhs += node.production[resource](index)
 
-            lhs = inflow + production
-            rhs = outflow + consumption
+        if resource in node.consumption:
+            rhs += node.consumption[resource](index)
 
-        else:
-            raise RuntimeError('node is not supported: ' + repr(node))
+        if resource in node.accumulation:
+            rhs += node.accumulation[resource](index)
 
         return Constraint(lhs == rhs, desc.format(self.resource, node))
         
 
-    def _all_balance_constraints(self, idx):
-        constraints = set(self._node_balance_constraint(node, idx) for node in self.nodes)
-        constraints.discard(None)
+    def _all_balance_constraints(self, index=None):
+        constraints = set(self._node_balance_constraint(node, index) for node in self.nodes)
         return constraints
