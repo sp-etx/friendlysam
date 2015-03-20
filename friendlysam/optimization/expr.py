@@ -2,14 +2,51 @@
 from friendlysam.compat import ignored
 import numbers
 
+def _replace_or_not(obj, replacements):
+    return obj.replace(replacements) if hasattr(obj, 'replace') else obj
 
-class Expression(object):
-    """docstring for Expression"""
+class _BinaryOperation(object):
+    """docstring for _BinaryOperation"""
+    def __init__(self, a, b):
+        super(_BinaryOperation, self).__init__()
+        self._args = a, b
 
     @property
     def symbols(self):
-        raise NotImplementedError()    
-    
+        raise NotImplementedError()
+
+    def replace(self, replacements):
+        args = (_replace_or_not(arg, replacements) for arg in self._args)
+        return self._evaluate(*args)
+
+    def __str__(self):
+        return self._format.format(*self._args)
+
+
+class LessEqual(_BinaryOperation):
+    _nargs = 2
+    _format = '({} <= {})'
+
+    def _evaluate(self, a, b):
+        return a <= b
+
+class GreaterEqual(_BinaryOperation):
+    _nargs = 2
+    _format = '({} >= {})'
+
+    def _evaluate(self, a, b):
+        return a >= b
+
+class Equals(_BinaryOperation):
+    _nargs = 2
+    _format = '({} == {})'
+
+    def _evaluate(self, a, b):
+        return a == b
+
+class _Expression(object):
+    """docstring for _Expression"""
+
     def __add__(self, other):
         return Add(self, other)
 
@@ -37,155 +74,49 @@ class Expression(object):
     def __ge__(self, other):
         return GreaterEqual(self, other)
 
+    def __eq__(self, other):
+        return Equals(self, other)
+
     def __lt__(self, other): raise NotImplementedError()
 
     def __gt__(self, other): raise NotImplementedError()
 
-    def replace(self, replacements):
-        raise NotImplementedError()
 
+class _BinaryExpr(_Expression, _BinaryOperation): pass        
 
-class _Numeric(Expression):
-    """docstring for _Numeric"""
-    def replace(self, replacements):
-        return self
-
-class Float(float, _Numeric): pass    
-
-class Int(int, _Numeric): pass
-
-def _ensure_expr(expr):
-    if isinstance(expr, float): return Float(expr)
-    if isinstance(expr, int): return Int(expr)
-    assert isinstance(expr, Expression)
-    return expr
-
-
-class _BinaryOp(Expression):
-    """docstring for _BinaryOp"""
-    def __init__(self, a, b):
-        super(_BinaryOp, self).__init__()
-        self._a = _ensure_expr(a)
-        self._b = _ensure_expr(b)
-
-    @property
-    def symbols(self):
-        symbols = set()
-        with ignored(AttributeError):
-            symbols.update(self._a.symbols)
-            symbols.update(self._b.symbols)
-        assert all(isinstance(s, Symbol) for s in symbols)
-        return symbols
-
-    @property
-    def a(self):
-        return self._a
-    
-    @property
-    def b(self):
-        return self._b
-
-
-class Add(_BinaryOp):
+class Add(_BinaryExpr):
     """docstring for Add"""
+    _format = '({} + {})'
 
-    def __new__(cls, a, b):
-        if a == 0:
-            return b
-        if b == 0:
-            return a
-        return super(Add, cls).__new__(cls, a, b)
+    def _evaluate(self, a, b):
+        return a + b
 
 
-    def __str__(self):
-        return '({} + {})'.format(self.a, self.b)
-
-
-    def replace(self, replacements):
-        return self._a.replace(replacements) + self._b.replace(replacements)
-
-
-class LessEqual(_BinaryOp):
-    """docstring for LessEqual"""
-
-    def __new__(cls, a, b):
-        return super(LessEqual, cls).__new__(cls, a, b)
-
-
-    def __str__(self):
-        return '({} <= {})'.format(self.a, self.b)
-
-
-    def replace(self, replacements):
-        return self._a.replace(replacements) <= self._b.replace(replacements)
-
-
-class GreaterEqual(_BinaryOp):
-    """docstring for GreaterEqual"""
-
-    def __new__(cls, a, b):
-        return super(GreaterEqual, cls).__new__(cls, a, b)
-
-
-    def __str__(self):
-        return '({} >= {})'.format(self.a, self.b)
-
-
-    def replace(self, replacements):
-        return self._a.replace(replacements) >= self._b.replace(replacements)
-
-class Sub(_BinaryOp):
+class Sub(_BinaryExpr):
     """docstring for Sub"""
-    
-    def __new__(cls, a, b):
-        if a == 0:
-            return -b
-        if b == 0:
-            return a
-        return super(Sub, cls).__new__(cls, a, b)
+    _format = '({} - {})'
 
-
-    def __str__(self):
-        return '({} - {})'.format(self.a, self.b)
-
-    def replace(self, replacements):
-        return self._a.replace(replacements) - self._b.replace(replacements)
+    def _evaluate(self, a, b):
+        return a - b
         
     
-class Mul(_BinaryOp):
+class Mul(_BinaryExpr):
     """docstring for Mul"""
     
-    def __new__(cls, a, b):
-        if a == 0 or b == 0:
-            return 0
-        elif b == 1:
-            return a
-        elif a == 1:
-            return b
+    _format = '({} * {})'
 
-        return super(Mul, cls).__new__(cls, a, b)
+    def _evaluate(self, a, b):
+        return a * b
 
 
-    def __str__(self):
-        return '({} * {})'.format(self.a, self.b)
-
-
-    def replace(self, replacements):
-        return self._a.replace(replacements) * self._b.replace(replacements)
-
-
-class Symbol(Expression):
+class Symbol(_Expression):
     """docstring for Symbol"""
     def __init__(self, name=None):
         super(Symbol, self).__init__()
         self._name = '<unnamed>' if name is None else name
 
-    @property
-    def symbols(self):
-        return {self}
-
     def __str__(self):
         return self._name
 
     def replace(self, replacements):
-        return replacements[self]
+        return replacements.get(self, self)
