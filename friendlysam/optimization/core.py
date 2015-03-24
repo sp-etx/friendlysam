@@ -4,9 +4,10 @@ from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
 import itertools
-
 from enum import Enum
+
 from friendlysam import NOINDEX
+from friendlysam.compat import ignored
 
 class Domain(Enum):
     """docstring for Domain"""
@@ -15,6 +16,144 @@ class Domain(Enum):
     binary = 2
 
 DEFAULT_DOMAIN = Domain.real
+
+def _evaluate_or_not(obj, replacements):
+    return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
+
+class Operation(object):
+    """docstring for Operation"""
+    def __init__(self, *args):
+        super(Operation, self).__init__()
+        self._args = tuple(args)
+
+    def evaluate(self, replacements):
+        return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
+
+    def __str__(self):
+        return self._format.format(*self._args)
+
+
+class LessEqual(Operation):
+    _format = '({} <= {})'
+
+    def _evaluate(self, a, b):
+        return a <= b
+
+class GreaterEqual(Operation):
+    _format = '({} >= {})'
+
+    def _evaluate(self, a, b):
+        return a >= b
+
+class Equals(Operation):
+    _format = '({} == {})'
+
+    def _evaluate(self, a, b):
+        return a == b
+
+class _Expression(Operation):
+    """docstring for _Expression"""
+
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __radd__(self, other):
+        return Add(other, self)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __rsub__(self, other):
+        return Sub(other, self)
+
+    def __mul__(self, other):
+        return Mul(self, other)
+
+    def __rmul__(self, other):
+        return Mul(other, self)
+
+    def __neg__(self):
+        return -1 * self
+
+    def __le__(self, other):
+        return LessEqual(self, other)
+
+    def __ge__(self, other):
+        return GreaterEqual(self, other)
+
+    def __eq__(self, other):
+        return Equals(self, other)
+
+
+class Add(_Expression):
+    """docstring for Add"""
+    _format = '({} + {})'
+
+    def _evaluate(self, a, b):
+        return a + b
+
+
+class Sub(_Expression):
+    """docstring for Sub"""
+    _format = '({} - {})'
+
+    def _evaluate(self, a, b):
+        return a - b
+        
+    
+class Mul(_Expression):
+    """docstring for Mul"""
+    
+    _format = '({} * {})'
+
+    def _evaluate(self, a, b):
+        return a * b
+
+
+class Variable(_Expression):
+    """docstring for Variable"""
+
+    def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
+        super(Variable, self).__init__()
+        self._name = '<unnamed>' if name is None else name
+        self.lb = lb
+        self.ub = ub
+        self.domain = domain
+
+    def __str__(self):
+        return self._name
+
+    def evaluate(self, replacements=None):
+        with ignored(AttributeError):
+            return self.value
+        with ignored(AttributeError):
+            return replacements.get(self, self)
+        return self
+
+    def constraint_func(self, index=NOINDEX):
+        # Not used in this implementation, but in principle a Variable may produce constraints
+        # which should be added to to any optimization problem where the variable is used.
+        # This was used to produce upper and lower bounds in the previous implementation 
+        # which used sympy symbols instead of Pyomo variables.
+        #
+        # It is still used in the subclass PiecewiseAffineArg.
+        return set()
+
+
+class VariableCollection(object):
+    """docstring for VariableCollection"""
+    def __init__(self, name=None, *kwargs):
+        super(VariableCollection, self).__init__()
+        self.name = name
+        self._kwargs = kwargs
+        self._vars = {}
+
+    def __getitem__(self, index):
+        if not index in self._vars:
+            name = '{}[{}]'.format(self.name, index)
+            self._vars[index] = Variable(name=name, **self._kwargs)
+        return self._vars[index]
+
 
 class ConstraintError(Exception): pass
 
@@ -85,68 +224,6 @@ class Minimize(_Objective):
     """docstring for Minimize"""
     pass
 
-class Variable(object):
-    """docstring for Variable"""
-
-    def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
-        super(Variable, self).__init__()
-        self.owner = None
-        self._name = name
-        self._lb = lb
-        self._ub = ub
-        self._domain = domain
-        self._values = {}
-
-    @property
-    def engine(self):
-        return self.owner.engine
-
-    def name(self, index):
-        if index is NOINDEX:
-            return self._name
-        else:
-            return '{}[{}]'.format(self._name, index)
-
-    @property
-    def domain(self):
-        return self._domain
-        
-    @property
-    def lb(self):
-        return self._lb
-
-    @property
-    def ub(self):
-        return self._ub
-
-    def _value_or_symbol(self, index):
-        if index in self._values:
-            return self._values[index]
-        else:
-            return self.engine.get_variable(self, index)
-        
-    def __call__(self, index=NOINDEX):
-        return self._value_or_symbol(index)
-
-    def take_value(self, solution, index=NOINDEX):
-        if not index in self._values:
-            self[index] = solution[self, index]
-
-    def set(self, value, index=NOINDEX):
-        self.engine.delete_variable(self, index)
-        self._values[index] = value
-
-    def __setitem__(self, index, value):
-        self.set(value, index)
-
-    def constraint_func(self, index=NOINDEX):
-        # Not used in this implementation, but in principle a Variable may produce constraints
-        # which should be added to to any optimization problem where the variable is used.
-        # This was used to produce upper and lower bounds in the previous implementation 
-        # which used sympy symbols instead of Pyomo variables.
-        #
-        # It is still used in the subclass PiecewiseAffineArg.
-        return set()
 
 
 
