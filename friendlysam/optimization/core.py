@@ -20,10 +20,10 @@ DEFAULT_DOMAIN = Domain.real
 def _evaluate_or_not(obj, replacements):
     return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
 
-class Operation(object):
-    """docstring for Operation"""
+class _Operation(object):
+    """docstring for _Operation"""
     def __init__(self, *args):
-        super(Operation, self).__init__()
+        super(_Operation, self).__init__()
         self._args = tuple(args)
 
     def evaluate(self, replacements):
@@ -33,25 +33,25 @@ class Operation(object):
         return self._format.format(*self._args)
 
 
-class LessEqual(Operation):
+class LessEqual(_Operation):
     _format = '({} <= {})'
 
     def _evaluate(self, a, b):
         return a <= b
 
-class GreaterEqual(Operation):
+class GreaterEqual(_Operation):
     _format = '({} >= {})'
 
     def _evaluate(self, a, b):
         return a >= b
 
-class Equals(Operation):
+class Equals(_Operation):
     _format = '({} == {})'
 
     def _evaluate(self, a, b):
         return a == b
 
-class _Expression(Operation):
+class _Expression(object):
     """docstring for _Expression"""
 
     def __add__(self, other):
@@ -85,7 +85,7 @@ class _Expression(Operation):
         return Equals(self, other)
 
 
-class Add(_Expression):
+class Add(_Operation, _Expression):
     """docstring for Add"""
     _format = '({} + {})'
 
@@ -93,7 +93,7 @@ class Add(_Expression):
         return a + b
 
 
-class Sub(_Expression):
+class Sub(_Operation, _Expression):
     """docstring for Sub"""
     _format = '({} - {})'
 
@@ -101,7 +101,7 @@ class Sub(_Expression):
         return a - b
         
     
-class Mul(_Expression):
+class Mul(_Operation, _Expression):
     """docstring for Mul"""
     
     _format = '({} * {})'
