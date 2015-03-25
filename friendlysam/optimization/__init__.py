@@ -141,6 +141,11 @@ class Variable(_MathEnabled):
         return self._name
 
 
+    @property
+    def leaves(self):
+        return (self,)
+
+
     def evaluate(self, replacements=None):
         with ignored(AttributeError):
             return self.value

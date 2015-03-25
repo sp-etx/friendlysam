@@ -158,6 +158,6 @@ class ResourceNetwork(Node):
         return Constraint(lhs == rhs, desc.format(self.resource, node))
         
 
-    def _all_balance_constraints(self, index=None):
+    def _all_balance_constraints(self, index=NOINDEX):
         constraints = set(self._node_balance_constraint(node, index) for node in self.nodes)
         return constraints
