@@ -71,8 +71,8 @@ class Storage(Node):
         self.capacity = capacity
         self.maxchange = maxchange
 
-        self.volume = self.variable('volume', lb=0., ub=capacity)
-        self.accumulation[resource] = lambda t: self.volume(t+1) - self.volume(t)
+        self.volume = self.variable_collection('volume', lb=0., ub=capacity)
+        self.accumulation[resource] = lambda t: self.volume[t+1] - self.volume[t]
 
         self += self._maxchange_constraints
 
@@ -128,7 +128,7 @@ class ResourceNetwork(Node):
         if not (n1, n2) in edges:
             self._graph.add_edge(n1, n2)
             name = 'flow ({} --> {})'.format(n1, n2)
-            self.flows[(n1, n2)] = self.variable(name, lb=0)
+            self.flows[(n1, n2)] = self.variable_collection(name, lb=0)
 
         if bidirectional and (n2, n1) not in edges:
             self.add_edge(n2, n1)
@@ -136,8 +136,8 @@ class ResourceNetwork(Node):
     def _node_balance_constraint(self, node, index):
         in_edges = self._graph.in_edges(nbunch=[node])
         out_edges = self._graph.out_edges(nbunch=[node])
-        inflow = sum([self.flows[edge](index) for edge in in_edges])
-        outflow = sum([self.flows[edge](index) for edge in out_edges])
+        inflow = sum([self.flows[edge][index] for edge in in_edges])
+        outflow = sum([self.flows[edge][index] for edge in out_edges])
 
         desc = 'Balance constraint ({}) for {}'
 

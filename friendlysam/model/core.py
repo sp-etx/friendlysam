@@ -69,8 +69,14 @@ class Part(object):
 
     def variable(self, name=None, **kwargs):
         name = '{}.{}'.format(self.name, name)
-        variable = Variable(name=name, **kwargs)
+        variable = opt.Variable(name=name, **kwargs)
         return variable
+
+
+    def variable_collection(self, name=None, **kwargs):
+        name = '{}.{}'.format(self.name, name)
+        collection = opt.VariableCollection(name=name, **kwargs)
+        return collection
 
 
     def constraints(self, depth, *indices):

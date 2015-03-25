@@ -94,6 +94,9 @@ class _MathEnabled(object):
     def __eq__(self, other):
         return Equals(self, other)
 
+    def __hash__(self):
+        return id(self)
+
 
 class Add(_Expression, _MathEnabled):
     """docstring for Add"""
@@ -133,12 +136,21 @@ class Variable(_MathEnabled):
     def __str__(self):
         return self._name
 
+    @property
+    def name(self):
+        return self._name
+
+
     def evaluate(self, replacements=None):
         with ignored(AttributeError):
             return self.value
         with ignored(AttributeError):
             return replacements.get(self, self)
         return self
+
+
+    def take_value(self, solution):
+        self.value = solution[self]
 
     def constraint_func(self, index=NOINDEX):
         # Not used in this implementation, but in principle a Variable may produce constraints
@@ -152,7 +164,7 @@ class Variable(_MathEnabled):
 
 class VariableCollection(object):
     """docstring for VariableCollection"""
-    def __init__(self, name=None, *kwargs):
+    def __init__(self, name=None, **kwargs):
         super(VariableCollection, self).__init__()
         self.name = name
         self._kwargs = kwargs
@@ -278,18 +290,10 @@ class Minimize(_Objective):
 
 class Problem(object):
     """An optimization problem"""
-    def __init__(self, engine=None, constraints=None, objective=None):
+    def __init__(self, constraints=None, objective=None):
         super(Problem, self).__init__()
         self.constraints = set() if constraints is None else constraints
         self.objective = objective
-        self.engine = engine
-
-    @property
-    def engine(self):
-        return self._engine
-    @engine.setter
-    def engine(self, value):
-        self._engine = value
 
     def solve(self):
         """Try to solve the optimization problem"""
