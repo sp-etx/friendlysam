@@ -4,7 +4,7 @@ from __future__ import division
 
 import networkx as nx
 
-from friendlysam.optimization.core import Constraint
+from friendlysam.optimization import Constraint
 from friendlysam.model import Part
 from friendlysam import NOINDEX
 

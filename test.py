@@ -1,6 +1,6 @@
 import itertools
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
-from friendlysam.optimization.core import *
+from friendlysam.optimization import *
 from friendlysam.optimization.pyomoengine import PyomoProblem
 
 RESOURCE = 0
