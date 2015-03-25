@@ -20,39 +20,49 @@ DEFAULT_DOMAIN = Domain.real
 def _evaluate_or_not(obj, replacements):
     return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
 
-class _Operation(object):
-    """docstring for _Operation"""
+class _Expression(object):
+    """docstring for _Expression"""
     def __init__(self, *args):
-        super(_Operation, self).__init__()
+        super(_Expression, self).__init__()
         self._args = tuple(args)
 
     def evaluate(self, replacements):
         return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
 
+    @property
+    def leaves(self):
+        leaves = set()
+        for a in self._args:
+            try:
+                leaves.update(a.leaves)
+            except AttributeError:
+                leaves.add(a)
+        return leaves
+
     def __str__(self):
         return self._format.format(*self._args)
 
 
-class LessEqual(_Operation):
+class LessEqual(_Expression):
     _format = '({} <= {})'
 
     def _evaluate(self, a, b):
         return a <= b
 
-class GreaterEqual(_Operation):
+class GreaterEqual(_Expression):
     _format = '({} >= {})'
 
     def _evaluate(self, a, b):
         return a >= b
 
-class Equals(_Operation):
+class Equals(_Expression):
     _format = '({} == {})'
 
     def _evaluate(self, a, b):
         return a == b
 
-class _Expression(object):
-    """docstring for _Expression"""
+class _MathEnabled(object):
+    """docstring for _MathEnabled"""
 
     def __add__(self, other):
         return Add(self, other)
@@ -85,7 +95,7 @@ class _Expression(object):
         return Equals(self, other)
 
 
-class Add(_Operation, _Expression):
+class Add(_Expression, _MathEnabled):
     """docstring for Add"""
     _format = '({} + {})'
 
@@ -93,7 +103,7 @@ class Add(_Operation, _Expression):
         return a + b
 
 
-class Sub(_Operation, _Expression):
+class Sub(_Expression, _MathEnabled):
     """docstring for Sub"""
     _format = '({} - {})'
 
@@ -101,7 +111,7 @@ class Sub(_Operation, _Expression):
         return a - b
         
     
-class Mul(_Operation, _Expression):
+class Mul(_Expression, _MathEnabled):
     """docstring for Mul"""
     
     _format = '({} * {})'
@@ -110,7 +120,7 @@ class Mul(_Operation, _Expression):
         return a * b
 
 
-class Variable(_Expression):
+class Variable(_MathEnabled):
     """docstring for Variable"""
 
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
