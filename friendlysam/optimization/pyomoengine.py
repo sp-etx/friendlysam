@@ -5,12 +5,14 @@ logger = get_logger(__name__)
 
 import operator
 import collections
+from itertools import chain
 
 import pyomo.environ as pyoenv
 import pyomo.opt
 from pyomo.opt import SolverFactory
 
-from friendlysam.optimization.core import *
+from friendlysam.optimization import (
+    Problem, Variable, Constraint, SOS1, SOS2, Maximize, Minimize, Domain)
 
 DEFAULT_OPTIONS = dict(
     solver_order=[
@@ -18,9 +20,8 @@ DEFAULT_OPTIONS = dict(
         dict(name='cbc', solver_io='nl')
     ])
 
-    
-class PyomoEngine(object):
-    """docstring for PyomoEngine"""
+class PyomoProblem(Problem):
+    """docstring for PyomoProblem"""
     _domain_mapping = {
         Domain.real: pyoenv.Reals,
         Domain.integer: pyoenv.Integers,
@@ -29,100 +30,46 @@ class PyomoEngine(object):
     }
 
     def __init__(self):
-        super(PyomoEngine, self).__init__()
+        super(PyomoProblem, self).__init__()
         self.options = DEFAULT_OPTIONS
         self._names = set()
-        self._var_name_counter = 0
-        self._variables = {}
 
-    def _register_unique_name(self, name):
-        if name is not None:
-            if name in self._names:
-                raise ValueError('a variable named {} already exists'.format(name))
-            elif name == '':
-                raise ValueError('empty string is not an allowed variable name')
-            elif not isinstance(name, str):
-                raise ValueError('variable name should be a string')
-
+    def _get_unique_name(self, name=None):
+        _counter = 0
         while name is None or name in self._names:
-            self._var_name_counter += 1
-            name = 'x{}'.format(self._var_name_counter)
+            _counter += 1
+            name = 'x{}'.format(_counter)
 
         self._names.add(name)
         return name
 
+    def _make_pyomo_var(self, variable):
+        options = dict(
+            bounds=(variable.lb, variable.ub),
+            domain=self._domain_mapping[variable.domain])
 
-    def register(self, owner, options_func):
-        self._options_funcs[owner] = options_func
+        name = self._get_unique_name(variable.name)
 
-    def get_variable(self, variable, index):
-        if not (variable, index) in self._variables:
-            options = dict(
-                lb=variable.lb,
-                ub=variable.ub,
-                domain=variable.domain,
-                name=variable.name)
+        pyovar = pyoenv.Var(**options)
+        pyovar.name = name
 
-            for key, value in options.items():
-                if callable(value):
-                    options[key] = value(index)
+        return pyovar
 
-            name = self._register_unique_name(options.pop('name'))
-
-            options['domain'] = self._domain_mapping[options['domain']]
-            options['bounds'] = (options['lb'], options['ub'])
-            del options['lb']
-            del options['ub']
-
-            symbol = pyoenv.Var(**options)
-            symbol.name = name
-            symbol._friendlysam_index = (variable, index)
-
-            self._variables[variable, index] = symbol
-
-        return self._variables[variable, index]
-
-    def variables(self):
-        return self._variables.values()
-
-    def delete_variable(self, variable, index):
-        try:
-            del self._variables[variable, index]
-        except KeyError:
-            pass
-
-    def problem(self, **kwargs):
-        if 'engine' in kwargs:
-            raise RuntimeError('Engine is implicitly specified already.')
-        kwargs['engine'] = self
-        return PyomoProblem(**kwargs)
-
-
-class PyomoProblem(Problem):
-    """docstring for PyomoProblem"""
-
-    def _get_and_apply_solver(self, problem):
-        solver_order = self.engine.options['solver_order']
-
-        for solver in solver_order:
-            exceptions = []
-            try:
-                solver = SolverFactory(solver['name'], solver_io=solver['solver_io'])
-                return solver.solve(problem)
-            except Exception, e:
-                exceptions.append({'solver': solver, 'exception': str(e)})
-
-        raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
+    def _variables_without_value(self):
+        leaves = chain(self.objective.expr.leaves, *(c.expr.leaves for c in self.constraints))
+        return (l for l in leaves if isinstance(l, Variable) and not hasattr(l, 'value'))
 
     def solve(self):        
         model = pyoenv.ConcreteModel()
-
-        for v in self.engine.variables():
+        pyomo_variables = {v: self._make_pyomo_var(v) for v in self._variables_without_value()}
+        for v in pyomo_variables.values():
             setattr(model, v.name, v)
 
         for i, c in enumerate(self.constraints):
             if isinstance(c, Constraint):
-                setattr(model, 'c{}'.format(i), pyoenv.Constraint(expr=c.expr))
+                setattr(model,
+                    'c{}'.format(i),
+                    pyoenv.Constraint(expr=c.expr.evaluate(replacements=pyomo_variables)))
                 
             elif isinstance(c, SOS1):
                 raise NotImplementedError()
@@ -137,7 +84,8 @@ class PyomoProblem(Problem):
             sense = pyoenv.minimize
         elif isinstance(self.objective, Maximize):
             sense = pyoenv.maximize
-        model.objective = pyoenv.Objective(expr=self.objective.expr, sense=sense)
+        model.objective = pyoenv.Objective(
+            expr=self.objective.expr.evaluate(replacements=pyomo_variables), sense=sense)
 
         model.preprocess()
 
@@ -148,6 +96,18 @@ class PyomoProblem(Problem):
 
         model.load(result)
 
-        return {v._friendlysam_index: v.value for v in self.engine.variables()}
+        return {v: pv.value for v, pv in pyomo_variables.items()}
 
+    def _get_and_apply_solver(self, problem):
+        solver_order = self.options['solver_order']
+
+        for solver in solver_order:
+            exceptions = []
+            try:
+                solver = SolverFactory(solver['name'], solver_io=solver['solver_io'])
+                return solver.solve(problem)
+            except Exception as e:
+                exceptions.append({'solver': solver, 'exception': str(e)})
+
+        raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
 

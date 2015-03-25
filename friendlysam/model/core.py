@@ -43,22 +43,6 @@ class Part(object):
 
         return self
 
-    @property
-    def engine(self):
-        try:
-            return self.model.engine
-        except AttributeError:
-            return None
-
-    @property
-    def model(self):
-        return self._model
-    @model.setter
-    def model(self, value):
-        self._model = value
-        for p in self.parts(0):
-            p.model = value
-    
 
     def parts(self, depth):
         parts = set()
@@ -76,7 +60,6 @@ class Part(object):
                 ' because it would generate a cyclic relationship')
 
         self._parts.add(p)
-        p.model = self.model
 
 
     def add_parts(self, *parts):
@@ -86,10 +69,14 @@ class Part(object):
 
     def variable(self, name=None, **kwargs):
         name = '{}.{}'.format(self.name, name)
-        variable = Variable(name=name, **kwargs)
-        self._constraint_funcs.add(variable.constraint_func)
-        variable.owner = self
+        variable = opt.Variable(name=name, **kwargs)
         return variable
+
+
+    def variable_collection(self, name=None, **kwargs):
+        name = '{}.{}'.format(self.name, name)
+        collection = opt.VariableCollection(name=name, **kwargs)
+        return collection
 
 
     def constraints(self, depth, *indices):
@@ -113,20 +100,3 @@ class Part(object):
         subparts = self.parts(depth)
         return constraints.union(*[p.constraints(0, *indices) for p in subparts])
 
-
-class Model(Part):
-    """docstring for Model"""
-    def __init__(self):
-        super(Model, self).__init__()
-        self._engine = None
-
-    @property
-    def engine(self):
-        return self._engine
-    @engine.setter
-    def engine(self, value):
-        self._engine = value
-
-    @property
-    def model(self):
-        return self

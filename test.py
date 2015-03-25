@@ -1,7 +1,7 @@
 import itertools
-from friendlysam.model import Model, Node, Storage, Cluster, ResourceNetwork
-from friendlysam.optimization.core import *
-from friendlysam.optimization.pyomoengine import PyomoEngine
+from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
+from friendlysam.optimization import *
+from friendlysam.optimization.pyomoengine import PyomoProblem
 
 RESOURCE = 0
 
@@ -11,11 +11,11 @@ def main():
         def __init__(self, param, **kwargs):
             super(Producer, self).__init__(**kwargs)
 
-            self.activity = self.variable('activity', lb=0)
+            self.activity = self.variable_collection('activity', lb=0)
 
-            self.production[RESOURCE] = lambda t: self.activity(t)
+            self.production[RESOURCE] = lambda t: self.activity[t]
 
-            self.cost = lambda t: param(t) * self.activity(t)
+            self.cost = lambda t: param(t) * self.activity[t]
 
 
     class Consumer(Node):
@@ -23,16 +23,12 @@ def main():
         def __init__(self, param, **kwargs):
             super(Consumer, self).__init__(**kwargs)
             
-            self.activity = self.variable('activity', lb=0)
-            self.consumption[RESOURCE] = lambda t: self.activity(t)
+            self.activity = self.variable_collection('activity', lb=0)
+            self.consumption[RESOURCE] = lambda t: self.activity[t]
             cons = self.consumption[RESOURCE]
 
             self += lambda t: (Constraint(cons(t) >= param(t)),)
 
-
-    engine = PyomoEngine()
-    m = Model()
-    m.engine = engine
 
     times = range(10)
 
@@ -42,24 +38,19 @@ def main():
     rn = ResourceNetwork(RESOURCE)
     rn.add_edge(p, s)
     rn.add_edge(s, c)
-    m.add_part(rn)
 
-    prob = engine.problem()
-    prob.constraints = m.constraints('inf', *times)
+    prob = PyomoProblem()
+    prob.constraints = rn.constraints('inf', *times)
 
     
     prob.objective = Minimize(sum(p.cost(t) for t in times))
     solution = prob.solve()
     for t in times:
-        c.activity.take_value(solution, t)
-        p.activity.take_value(solution, t)
-        s.volume.take_value(solution, t)
-        print(t, p.activity(t), s.volume(t), c.activity(t))
+        c.activity[t].take_value(solution)
+        p.activity[t].take_value(solution)
+        s.volume[t].take_value(solution)
+        print(t, p.activity[t].value, s.volume[t].value, c.activity[t].value)
 
-
-    engine = PyomoEngine()
-    m = Model()
-    m.engine = engine
 
     times = range(10)
 
@@ -70,15 +61,14 @@ def main():
     cluster = Cluster(p2, c, s)
     rn = ResourceNetwork(RESOURCE)
     rn.add_edge(p1, cluster)
-    rn += lambda t: (Constraint(rn.flows[(p1, cluster)](t) <= 3.3),)
+    rn += lambda t: (Constraint(rn.flows[(p1, cluster)][t] <= 3.3),)
 
-    m.add_part(rn)
 
-    s.volume[0] = 1.3
-    print(s.volume(0))
+    s.volume[0].value = 1.3
+    print(s.volume[0])
 
-    prob = engine.problem()
-    prob.constraints = m.constraints('inf', *times)
+    prob = PyomoProblem()
+    prob.constraints = rn.constraints('inf', *times)
 
     
     prob.objective = Minimize(sum(p1.cost(t) + p2.cost(t) for t in times))
@@ -86,11 +76,13 @@ def main():
 
     
     for t in times:
-        c.activity.take_value(solution, t)
-        p1.activity.take_value(solution, t)
-        p2.activity.take_value(solution, t)
-        s.volume.take_value(solution, t)
-        print(t, p1.activity(t), p2.activity(t), s.volume(t), c.activity(t))
+        c.activity[t].take_value(solution)
+        p1.activity[t].take_value(solution)
+        p2.activity[t].take_value(solution)
+        #s.volume[t].take_value(solution)
+        print(t, p1.activity[t].value, p2.activity[t].value, 
+            #s.volume[t].value, 
+            c.activity[t].value)
     
 if __name__ == '__main__':
     main()
