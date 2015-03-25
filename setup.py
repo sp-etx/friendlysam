@@ -1,8 +1,8 @@
-from distutils.core import setup
+from setuptools import setup
 setup(
 name='friendlysam',
 version='',
-packages=[],
+packages=['friendlysam'],
 url='',
 license='',
 author='',

@@ -1,4 +1,6 @@
 env
 docs/_build/**
+friendlysam.egg-info
+bin
 *.pyc
 **/gurobi.log
