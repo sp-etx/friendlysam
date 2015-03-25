@@ -114,15 +114,19 @@ class PyomoProblem(Problem):
 
         raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
 
+    def _unset_variables(self):
+        variables = chain(*(c.variables for c in self.constraints))
+        return (v for v in variables if isinstance(l, Variable) and not hasattr(l, 'value'))
+
     def solve(self):        
         model = pyoenv.ConcreteModel()
-
-        for v in self.engine.variables():
-            setattr(model, v.name, v)
+        pyomo_variables = {v: _make_pyomo_var(v) for v in self._unset_variables()}
 
         for i, c in enumerate(self.constraints):
             if isinstance(c, Constraint):
-                setattr(model, 'c{}'.format(i), pyoenv.Constraint(expr=c.expr))
+                setattr(model,
+                    'c{}'.format(i),
+                    pyoenv.Constraint(expr=c.expr.evaluate(replacements=pyomo_variables)))
                 
             elif isinstance(c, SOS1):
                 raise NotImplementedError()
@@ -137,7 +141,7 @@ class PyomoProblem(Problem):
             sense = pyoenv.minimize
         elif isinstance(self.objective, Maximize):
             sense = pyoenv.maximize
-        model.objective = pyoenv.Objective(expr=self.objective.expr, sense=sense)
+        model.objective = pyoenv.Objective(expr=self.objective.expr.evaluate(, sense=sense)
 
         model.preprocess()
 
