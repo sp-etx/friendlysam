@@ -1,7 +1,9 @@
+PyUtilib==5.0.3478
+Pyomo==4.0.9682
 decorator==3.4.2
+enum34==1.0.4
+future==0.14.3
 networkx==1.9.1
 nose==1.3.4
 ply==3.4
-Pyomo==4.0.9682
-PyUtilib==5.0.3478
 six==1.9.0

@@ -1,3 +1,11 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from builtins import range
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
 import itertools
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization import *
