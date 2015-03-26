@@ -29,17 +29,22 @@ DEFAULT_OPTIONS = dict(
         dict(name='cbc', solver_io='nl')
     ])
 
-class PyomoProblem(Problem):
-    """docstring for PyomoProblem"""
-    _domain_mapping = {
-        Domain.real: pyoenv.Reals,
-        Domain.integer: pyoenv.Integers,
-        Domain.binary: pyoenv.Binary,
-        None: None
-    }
+def _variables_without_value(prob):
+    leaves = chain(prob.objective.expr.leaves, *(c.expr.leaves for c in prob.constraints))
+    return (l for l in leaves if isinstance(l, Variable) and not hasattr(l, 'value'))
+
+_domain_mapping = {
+    Domain.real: pyoenv.Reals,
+    Domain.integer: pyoenv.Integers,
+    Domain.binary: pyoenv.Binary,
+    None: None
+}
+
+class PyomoSolver(object):
+    """docstring for PyomoSolver"""
 
     def __init__(self):
-        super(PyomoProblem, self).__init__()
+        super(PyomoSolver, self).__init__()
         self.options = DEFAULT_OPTIONS
         self._names = set()
 
@@ -55,7 +60,7 @@ class PyomoProblem(Problem):
     def _make_pyomo_var(self, variable):
         options = dict(
             bounds=(variable.lb, variable.ub),
-            domain=self._domain_mapping[variable.domain])
+            domain=_domain_mapping[variable.domain])
 
         name = self._get_unique_name(variable.name)
 
@@ -64,17 +69,14 @@ class PyomoProblem(Problem):
 
         return pyovar
 
-    def _variables_without_value(self):
-        leaves = chain(self.objective.expr.leaves, *(c.expr.leaves for c in self.constraints))
-        return (l for l in leaves if isinstance(l, Variable) and not hasattr(l, 'value'))
 
-    def solve(self):        
+    def solve(self, problem):
         model = pyoenv.ConcreteModel()
-        pyomo_variables = {v: self._make_pyomo_var(v) for v in self._variables_without_value()}
+        pyomo_variables = {v: self._make_pyomo_var(v) for v in _variables_without_value(problem)}
         for v in pyomo_variables.values():
             setattr(model, v.name, v)
 
-        for i, c in enumerate(self.constraints):
+        for i, c in enumerate(problem.constraints):
             if isinstance(c, Constraint):
                 setattr(model,
                     'c{}'.format(i),
@@ -89,34 +91,29 @@ class PyomoProblem(Problem):
             else:
                 raise NotImplementedError('Cannot handle constraint {}'.format(c))
 
-        if isinstance(self.objective, Minimize):
+        if isinstance(problem.objective, Minimize):
             sense = pyoenv.minimize
-        elif isinstance(self.objective, Maximize):
+        elif isinstance(problem.objective, Maximize):
             sense = pyoenv.maximize
         model.objective = pyoenv.Objective(
-            expr=self.objective.expr.evaluate(replacements=pyomo_variables), sense=sense)
+            expr=problem.objective.expr.evaluate(replacements=pyomo_variables), sense=sense)
 
         model.preprocess()
 
-        result = self._get_and_apply_solver(model)
-
+        exceptions = []
+        for solver in self.options['solver_order']:
+            try:
+                solver = SolverFactory(solver['name'], solver_io=solver['solver_io'])
+                result = solver.solve(model)
+                break
+            except Exception as e:
+                exceptions.append({'solver': solver, 'exception': str(e)})
+        else:
+            raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
+        
         if not result.Solution.Status == pyomo.opt.SolutionStatus.optimal:
             raise SolverError("pyomo solution status is '{0}'".format(result.Solution.Status))
 
         model.load(result)
 
         return {v: pv.value for v, pv in pyomo_variables.items()}
-
-    def _get_and_apply_solver(self, problem):
-        solver_order = self.options['solver_order']
-
-        for solver in solver_order:
-            exceptions = []
-            try:
-                solver = SolverFactory(solver['name'], solver_io=solver['solver_io'])
-                return solver.solve(problem)
-            except Exception as e:
-                exceptions.append({'solver': solver, 'exception': str(e)})
-
-        raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
-

@@ -10,7 +10,7 @@ standard_library.install_aliases()
 from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization import *
-from friendlysam.optimization.pyomoengine import PyomoProblem
+from friendlysam.optimization.pyomoengine import PyomoSolver
 
 RESOURCE = 0
 ABSTOL = 1e-6
@@ -57,12 +57,12 @@ def test_basic_functionality():
     rn.add_edge(p, s)
     rn.add_edge(s, c)
 
-    prob = PyomoProblem()
+    prob = Problem()
     prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
 
-    solution = prob.solve()
+    solution = PyomoSolver().solve(prob)
 
     for t in times:
         c.activity(t).take_value(solution)

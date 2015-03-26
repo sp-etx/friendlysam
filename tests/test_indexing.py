@@ -2,7 +2,7 @@ from itertools import chain
 from nose.tools import raises
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization import *
-from friendlysam.optimization.pyomoengine import PyomoProblem
+from friendlysam.optimization.pyomoengine import PyomoSolver
 
 RESOURCE = 0
 ABSTOL = 1e-6
@@ -48,12 +48,12 @@ def test_indexed():
     rn.add_edge(p, s)
     rn.add_edge(s, c)
 
-    prob = PyomoProblem()
+    prob = Problem()
     prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
     
     prob.objective = Minimize(p.production[RESOURCE](times[0]))
     
-    solution = prob.solve()
+    solution = PyomoSolver().solve(prob)
     for t in times:
         c.activity(t).take_value(solution)
         p.activity(t).take_value(solution)
@@ -69,12 +69,12 @@ def test_not_indexed():
     rn = ResourceNetwork(RESOURCE)
     rn.add_edge(p, c)
 
-    prob = PyomoProblem()
+    prob = Problem()
     prob.add_constraints(rn.constraints())
     
     prob.objective = Minimize(p.production[RESOURCE]())
     
-    solution = prob.solve()
+    solution = PyomoSolver().solve(prob)
     c.activity.take_value(solution)
     p.activity.take_value(solution)
 
