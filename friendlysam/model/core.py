@@ -19,7 +19,6 @@ class Part(object):
     _part_counter = 0
 
     def __init__(self, name=None):
-        super(Part, self).__init__()
         self._constraint_funcs = set()
         self._model = None
         Part._part_counter += 1

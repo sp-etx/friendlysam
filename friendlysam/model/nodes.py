@@ -21,7 +21,7 @@ from friendlysam.compat import ignored
 class Node(Part):
     """docstring for Node"""
     def __init__(self, **kwargs):
-        super(Node, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.consumption = dict()
         self.production = dict()
         self.accumulation = dict()
@@ -100,7 +100,6 @@ class Cluster(Node):
     class ClusterDict(object):
         """docstring for ClusterDict"""
         def __init__(self, owner, attr_name):
-            super(Cluster.ClusterDict, self).__init__()
             self._owner = owner
             self._attr_name = attr_name
             self._dict = {}
@@ -126,7 +125,7 @@ class Cluster(Node):
 
     def __init__(self, *parts, **kwargs):
         self._resource = kwargs.pop('resource')
-        super(Cluster, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.add_parts(*parts)
 
         self.consumption = Cluster.ClusterDict(self, 'consumption')
@@ -140,18 +139,18 @@ class Cluster(Node):
 
 
     def add_part(self, part):
-        super(Cluster, self).add_part(part)
+        super().add_part(part)
         try:
             part.set_cluster(self)
         except InsanityError as e:
-            super(Cluster, self).remove_part(part)
+            super().remove_part(part)
             raise e
 
 
 class Storage(Node):
     """docstring for Storage"""
     def __init__(self, resource, capacity=None, maxchange=None, **kwargs):
-        super(Storage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.resource = resource
         self.capacity = capacity
         self.maxchange = maxchange
@@ -182,7 +181,7 @@ class Storage(Node):
 class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""
     def __init__(self, resource, **kwargs):
-        super(ResourceNetwork, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.resource = resource
         self._graph = nx.DiGraph()
 

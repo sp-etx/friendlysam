@@ -10,7 +10,7 @@ standard_library.install_aliases()
 class Item(object):
     """docstring for Item"""
     def __init__(self, sequence, value):
-        super(Item, self).__init__()
+        super().__init__()
         self._sequence = sequence
         if not sequence.contains(value):
             raise SequenceError("value {} not in sequence".format(value))
@@ -61,7 +61,7 @@ class Sequence(object):
 class Integers(Sequence):
     """docstring for Integers"""
     def __init__(self, start, stop, cycle=False):
-        super(Integers, self).__init__()
+        super().__init__()
         self._start = start
         self._stop = stop
         self._length = stop - start
@@ -85,7 +85,7 @@ class Integers(Sequence):
 class OrderedSet(Sequence):
     """docstring for OrderedSet"""
     def __init__(self, values, cycle=False):
-        super(OrderedSet, self).__init__()
+        super().__init__()
         self._values = tuple(v for v in values)
         self._indices = {val: index for index, val in enumerate(self._values)}
         self._cycle = cycle

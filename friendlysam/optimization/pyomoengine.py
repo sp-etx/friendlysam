@@ -44,7 +44,7 @@ class PyomoSolver(object):
     """docstring for PyomoSolver"""
 
     def __init__(self):
-        super(PyomoSolver, self).__init__()
+        super().__init__()
         self.options = DEFAULT_OPTIONS
         self._names = set()
 

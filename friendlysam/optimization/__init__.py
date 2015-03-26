@@ -33,7 +33,7 @@ def _evaluate_or_not(obj, replacements):
 class _Expression(object):
     """docstring for _Expression"""
     def __init__(self, *args):
-        super(_Expression, self).__init__()
+        super().__init__()
         self._args = tuple(args)
 
     def evaluate(self, replacements):
@@ -137,7 +137,7 @@ class Variable(_MathEnabled):
     """docstring for Variable"""
 
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
-        super(Variable, self).__init__()
+        super().__init__()
         self._name = '<unnamed>' if name is None else name
         self.lb = lb
         self.ub = ub
@@ -180,7 +180,7 @@ class Variable(_MathEnabled):
 class VariableCollection(object):
     """docstring for VariableCollection"""
     def __init__(self, name=None, **kwargs):
-        super(VariableCollection, self).__init__()
+        super().__init__()
         self.name = name
         self._kwargs = kwargs
         self._vars = {}
@@ -198,7 +198,7 @@ class ConstraintError(Exception): pass
 class _ConstraintBase(object):
     """docstring for _ConstraintBase"""
     def __init__(self, desc=None):
-        super(_ConstraintBase, self).__init__()
+        super().__init__()
         self.desc = desc
 
     def _add_desc(self, s):
@@ -211,7 +211,7 @@ class _ConstraintBase(object):
 class Constraint(_ConstraintBase):
     """docstring for Constraint"""
     def __init__(self, expr, desc=None):
-        super(Constraint, self).__init__(desc)
+        super().__init__(desc)
         self.expr = expr
 
     def __str__(self):
@@ -221,7 +221,7 @@ class Constraint(_ConstraintBase):
 class _SOS(_ConstraintBase):
     """docstring for _SOS"""
     def __init__(self, sostype, symbols, desc=None):
-        super(_SOS, self).__init__(desc)
+        super().__init__(desc)
         if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
@@ -238,19 +238,19 @@ class _SOS(_ConstraintBase):
 class SOS1(_SOS):
     """docstring for SOS1"""
     def __init__(self, symbols, desc=None):
-        super(SOS1, self).__init__(1, symbols, desc=desc)
+        super().__init__(1, symbols, desc=desc)
 
 
 class SOS2(_SOS):
     """docstring for SOS2"""
     def __init__(self, symbols, desc=None):
-        super(SOS2, self).__init__(2, symbols, desc=desc)
+        super().__init__(2, symbols, desc=desc)
 
 
 class _Objective(object):
     """docstring for _Objective"""
     def __init__(self, expr):
-        super(_Objective, self).__init__()
+        super().__init__()
         self.expr = expr
 
 class Maximize(_Objective):
@@ -267,7 +267,7 @@ class Minimize(_Objective):
 # class PiecewiseAffineArg(Variable):
 #     """docstring for Variable"""
 #     def __init__(self, name, points):
-#         super(PiecewiseAffineArg, self).__init__(name)
+#         super().__init__(name)
 #         self.points = points
 #         SymbolCatalog().register(self, self._symbol_options)
 
@@ -306,7 +306,7 @@ class Minimize(_Objective):
 class Problem(object):
     """An optimization problem"""
     def __init__(self, constraints=None, objective=None):
-        super(Problem, self).__init__()
+        super().__init__()
         self._constraints = set() if constraints is None else constraints
         self.objective = objective
 
