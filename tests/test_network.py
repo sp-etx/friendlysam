@@ -10,7 +10,7 @@ standard_library.install_aliases()
 from nose.tools import raises
 
 from itertools import chain
-from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
+from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
 from friendlysam.optimization import *
 from friendlysam.optimization.pyomoengine import PyomoSolver
 
@@ -69,6 +69,14 @@ def test_cluster():
         assert approx(p.production[RESOURCE](t).evaluate({}), consumption(t))
         assert approx(c.consumption[RESOURCE](t).evaluate({}), consumption(t))
 
+
+@raises(InsanityError)
+def test_cluster_insanity():
+    n = Node()
+    Cluster(n, resource=RESOURCE)
+    Cluster(n, resource=RESOURCE)
+
+
 @raises(SolverError)
 def test_balance():
     times = range(1,4)
@@ -86,4 +94,4 @@ def test_balance():
 
 
 if __name__ == '__main__':
-    test_balance()
+    test_cluster_insanity()
