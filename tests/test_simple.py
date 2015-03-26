@@ -22,7 +22,7 @@ class Producer(Node):
 
         self.activity = self.variable_collection('activity', lb=0)
 
-        self.production[RESOURCE] = lambda t: self.activity(t)
+        self.production[RESOURCE] = self.activity
 
         self.cost = lambda t: param(t) * self.activity(t)
 
@@ -33,7 +33,7 @@ class Consumer(Node):
         super(Consumer, self).__init__(**kwargs)
         
         self.activity = self.variable_collection('activity', lb=0)
-        self.consumption[RESOURCE] = lambda t: self.activity(t)
+        self.consumption[RESOURCE] = self.activity
         cons = self.consumption[RESOURCE]
 
         self += lambda t: (Constraint(cons(t) == param(t)),)

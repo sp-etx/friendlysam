@@ -13,7 +13,7 @@ class Producer(Node):
 
         if indexed:
             self.activity = self.variable_collection('activity', lb=0)
-            self.production[RESOURCE] = lambda t: self.activity(t)
+            self.production[RESOURCE] = self.activity
         else:
             self.activity = self.variable('activity', lb=0)
             self.production[RESOURCE] = lambda: self.activity
@@ -26,7 +26,7 @@ class Consumer(Node):
         
         if indexed:
             self.activity = self.variable_collection('activity', lb=0)
-            self.consumption[RESOURCE] = lambda t: self.activity(t)
+            self.consumption[RESOURCE] = self.activity
             self += lambda t: (Constraint(self.consumption[RESOURCE](t) == consumption(t)),)
         else:
             self.activity = self.variable('activity', lb=0)
