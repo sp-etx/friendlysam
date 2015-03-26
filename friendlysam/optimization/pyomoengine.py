@@ -21,7 +21,7 @@ import pyomo.opt
 from pyomo.opt import SolverFactory
 
 from friendlysam.optimization import (
-    Problem, Variable, Constraint, SOS1, SOS2, Maximize, Minimize, Domain)
+    Problem, Variable, Constraint, SOS1, SOS2, Maximize, Minimize, Domain, SolverError)
 
 DEFAULT_OPTIONS = dict(
     solver_order=[

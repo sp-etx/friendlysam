@@ -10,10 +10,16 @@ from builtins import super
 from future import standard_library
 standard_library.install_aliases()
 
+from itertools import chain
+
 import networkx as nx
 
 from friendlysam.optimization import Constraint
 from friendlysam.model import Part
+from friendlysam.compat import ignored
+
+class InsanityError(Exception): pass        
+
 
 class Node(Part):
     """docstring for Node"""
@@ -22,6 +28,58 @@ class Node(Part):
         self.consumption = dict()
         self.production = dict()
         self.accumulation = dict()
+
+        self._inflows = set()
+        self._outflows = set()
+
+        self._clusters = dict()
+
+        self += self._all_balance_constraints
+
+
+    @property
+    def inflows(self):
+        return self._inflows
+
+
+    @property
+    def outflows(self):
+        return self._outflows
+
+
+    def set_cluster(self, cluster):
+        res = cluster.resource
+        if res in self._clusters and self._clusters[res] is not cluster:
+            raise InsanityError('already clustered with that resource!')
+        self._clusters[res] = cluster
+
+
+    def _balance_constraint(self, resource, *indices):
+        inflow = sum(flow(*indices) for flow in self._inflows)
+        outflow = sum(flow(*indices) for flow in self._outflows)
+
+        desc = 'Balance constraint ({}) for {}'
+
+        lhs = inflow
+        rhs = outflow
+
+        if resource in self.production:
+            lhs += self.production[resource](*indices)
+
+        if resource in self.consumption:
+            rhs += self.consumption[resource](*indices)
+
+        if resource in self.accumulation:
+            rhs += self.accumulation[resource](*indices)
+
+        return Constraint(lhs == rhs, desc.format(resource, self))
+        
+
+    def _all_balance_constraints(self, *indices):
+        balance_dicts = (self.consumption, self.production, self.accumulation)
+        resources = set(chain(*(d.keys() for d in balance_dicts)))
+        resources = list(r for r in resources if r not in self._clusters)
+        return set(self._balance_constraint(r, *indices) for r in resources)
 
 
 def _get_aggr_func(owner, attr_name, resource):
@@ -51,7 +109,7 @@ class Cluster(Node):
             self._dict = {}
 
         def __contains__(self, resource):
-            for part in self._owner.parts(0):
+            for part in self._owner.parts(depth=0):
                 if hasattr(part, self._attr_name) and resource in getattr(part, self._attr_name):
                     return True
 
@@ -61,13 +119,36 @@ class Cluster(Node):
             return self._dict[resource]
 
 
+        def keys(self):
+            keys = set()
+            for part in self._owner.parts(depth=0):
+                with ignored(AttributeError):
+                    keys.update(getattr(part, self._attr_name).keys())
+            return keys
+
+
     def __init__(self, *parts, **kwargs):
+        self._resource = kwargs.pop('resource')
         super(Cluster, self).__init__(**kwargs)
         self.add_parts(*parts)
 
         self.consumption = Cluster.ClusterDict(self, 'consumption')
         self.production = Cluster.ClusterDict(self, 'production')
         self.accumulation = Cluster.ClusterDict(self, 'accumulation')
+
+
+    @property
+    def resource(self):
+        return self._resource
+
+
+    def add_part(self, part):
+        super(Cluster, self).add_part(part)
+        try:
+            part.set_cluster(self)
+        except InsanityError as e:
+            super(Cluster, self).remove_part(part)
+            raise e
 
 
 class Storage(Node):
@@ -101,7 +182,7 @@ class Storage(Node):
             RelConstraint(-maxchange <= acc, 'Max net outflow from {}'.format(self)))
 
 
-class ResourceNetwork(Node):
+class ResourceNetwork(Part):
     """docstring for ResourceNetwork"""
     def __init__(self, resource, **kwargs):
         super(ResourceNetwork, self).__init__(**kwargs)
@@ -109,12 +190,6 @@ class ResourceNetwork(Node):
         self._graph = nx.DiGraph()
 
         self.flows = dict()
-
-        self.consumption[resource] = _get_aggr_func(self, 'consumption', resource)
-        self.production[resource] = _get_aggr_func(self, 'production', resource)
-        self.accumulation[resource] = _get_aggr_func(self, 'accumulation', resource)
-
-        self += self._all_balance_constraints
 
     @property
     def nodes(self):
@@ -132,6 +207,7 @@ class ResourceNetwork(Node):
         map(self.add_node, nodes)
 
     def add_edge(self, n1, n2, bidirectional=False):
+
         edges = self._graph.edges()
         nodes = self._graph.nodes()
 
@@ -144,37 +220,10 @@ class ResourceNetwork(Node):
         if not (n1, n2) in edges:
             self._graph.add_edge(n1, n2)
             name = 'flow ({} --> {})'.format(n1, n2)
-            self.flows[(n1, n2)] = self.variable_collection(name, lb=0)
+            flow = self.variable_collection(name, lb=0)
+            self.flows[(n1, n2)] = flow
+            n1.outflows.add(flow)
+            n2.inflows.add(flow)
 
         if bidirectional and (n2, n1) not in edges:
             self.add_edge(n2, n1)
-
-    def _node_balance_constraint(self, node, *indices):
-
-        in_edges = self._graph.in_edges(nbunch=[node])
-        out_edges = self._graph.out_edges(nbunch=[node])
-        inflow = sum([self.flows[edge](*indices) for edge in in_edges])
-        outflow = sum([self.flows[edge](*indices) for edge in out_edges])
-
-        desc = 'Balance constraint ({}) for {}'
-
-        resource = self.resource
-
-        lhs = inflow
-        rhs = outflow
-
-        if resource in node.production:
-            lhs += node.production[resource](*indices)
-
-        if resource in node.consumption:
-            rhs += node.consumption[resource](*indices)
-
-        if resource in node.accumulation:
-            rhs += node.accumulation[resource](*indices)
-
-        return Constraint(lhs == rhs, desc.format(self.resource, node))
-        
-
-    def _all_balance_constraints(self, *indices):
-        constraints = set(self._node_balance_constraint(node, *indices) for node in self.nodes)
-        return constraints

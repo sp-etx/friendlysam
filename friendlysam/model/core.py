@@ -69,6 +69,10 @@ class Part(object):
         self._parts.add(p)
 
 
+    def remove_part(self, p):
+        self._parts.remove(p)
+
+
     def add_parts(self, *parts):
         for p in parts:
             self.add_part(p)

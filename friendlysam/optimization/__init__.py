@@ -16,6 +16,9 @@ from enum import Enum
 
 from friendlysam.compat import ignored
 
+class SolverError(Exception): pass
+        
+
 class Domain(Enum):
     """docstring for Domain"""
     real = 0
