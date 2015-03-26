@@ -11,6 +11,8 @@ standard_library.install_aliases()
 
 import friendlysam.optimization as opt
 
+class InsanityError(Exception): pass
+
 class Part(object):
     """docstring for Part"""
 

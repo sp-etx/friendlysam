@@ -15,11 +15,8 @@ from itertools import chain
 import networkx as nx
 
 from friendlysam.optimization import Constraint
-from friendlysam.model import Part
+from friendlysam.model import Part, InsanityError
 from friendlysam.compat import ignored
-
-class InsanityError(Exception): pass        
-
 
 class Node(Part):
     """docstring for Node"""
