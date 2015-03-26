@@ -186,7 +186,7 @@ class ResourceNetwork(Part):
         self.resource = resource
         self._graph = nx.DiGraph()
 
-        self.flows = dict()
+        self._flows = dict()
 
     @property
     def nodes(self):
@@ -196,29 +196,21 @@ class ResourceNetwork(Part):
     def edges(self):
         return self._graph.edges()
 
-    def add_node(self, n):
-        self._graph.add_node(n)
-        self.add_part(n)
-
     def add_nodes(self, *nodes):
         map(self.add_node, nodes)
 
+    def remove_part(self, part):
+        raise NotImplementedError('need to also remove edges then')
+
     def add_edge(self, n1, n2, bidirectional=False):
-
         edges = self._graph.edges()
-        nodes = self._graph.nodes()
-
-        if not n1 in nodes:
-            self.add_part(n1)
-
-        if not n2 in nodes:
-            self.add_part(n2)
             
         if not (n1, n2) in edges:
+            self.add_parts(n1, n2)
             self._graph.add_edge(n1, n2)
             name = 'flow ({} --> {})'.format(n1, n2)
             flow = self.variable_collection(name, lb=0)
-            self.flows[(n1, n2)] = flow
+            self._flows[(n1, n2)] = flow
             n1.outflows.add(flow)
             n2.inflows.add(flow)
 
