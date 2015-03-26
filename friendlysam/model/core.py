@@ -51,7 +51,7 @@ class Part(object):
         return self
 
 
-    def parts(self, depth):
+    def parts(self, depth='inf'):
         parts = set()
         depth = float(depth)
         if depth >= 0:
