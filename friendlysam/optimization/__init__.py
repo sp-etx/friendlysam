@@ -14,7 +14,6 @@ logger = get_logger(__name__)
 import itertools
 from enum import Enum
 
-from friendlysam import NOINDEX
 from friendlysam.compat import ignored
 
 class Domain(Enum):
@@ -165,7 +164,7 @@ class Variable(_MathEnabled):
     def take_value(self, solution):
         self.value = solution[self]
 
-    def constraint_func(self, index=NOINDEX):
+    def constraint_func(self, *indices):
         # Not used in this implementation, but in principle a Variable may produce constraints
         # which should be added to to any optimization problem where the variable is used.
         # This was used to produce upper and lower bounds in the previous implementation 
@@ -183,11 +182,11 @@ class VariableCollection(object):
         self._kwargs = kwargs
         self._vars = {}
 
-    def __getitem__(self, index):
-        if not index in self._vars:
-            name = '{}[{}]'.format(self.name, index)
-            self._vars[index] = Variable(name=name, **self._kwargs)
-        return self._vars[index]
+    def __call__(self, *indices):
+        if not indices in self._vars:
+            name = '{}{}'.format(self.name, indices)
+            self._vars[indices] = Variable(name=name, **self._kwargs)
+        return self._vars[indices]
 
 
 class ConstraintError(Exception): pass

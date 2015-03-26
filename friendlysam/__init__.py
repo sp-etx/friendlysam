@@ -6,9 +6,3 @@ from __future__ import division
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
-class _NoIndex(object):
-    """docstring for NoIndex"""
-    def __str__(self):
-        return 'NoIndex'
-
-NOINDEX = _NoIndex()

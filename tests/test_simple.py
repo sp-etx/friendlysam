@@ -6,6 +6,8 @@ from builtins import range
 from builtins import super
 from future import standard_library
 standard_library.install_aliases()
+
+from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization import *
 from friendlysam.optimization.pyomoengine import PyomoProblem
@@ -20,9 +22,9 @@ class Producer(Node):
 
         self.activity = self.variable_collection('activity', lb=0)
 
-        self.production[RESOURCE] = lambda t: self.activity[t]
+        self.production[RESOURCE] = lambda t: self.activity(t)
 
-        self.cost = lambda t: param(t) * self.activity[t]
+        self.cost = lambda t: param(t) * self.activity(t)
 
 
 class Consumer(Node):
@@ -31,7 +33,7 @@ class Consumer(Node):
         super(Consumer, self).__init__(**kwargs)
         
         self.activity = self.variable_collection('activity', lb=0)
-        self.consumption[RESOURCE] = lambda t: self.activity[t]
+        self.consumption[RESOURCE] = lambda t: self.activity(t)
         cons = self.consumption[RESOURCE]
 
         self += lambda t: (Constraint(cons(t) == param(t)),)
@@ -50,26 +52,27 @@ def test_basic_functionality():
     p = Producer(lambda t: t ** 2, name='Producer')
     c = Consumer(consumption, name='Consumer')
     s = Storage(RESOURCE, capacity=15, name='Storage')
-    s.volume[0].value = V0
+    s.volume(0).value = V0
     rn = ResourceNetwork(RESOURCE)
     rn.add_edge(p, s)
     rn.add_edge(s, c)
 
     prob = PyomoProblem()
-    prob.constraints = rn.constraints('inf', *times)
-    
+    prob.constraints = tuple(chain(*(rn.constraints('inf', t) for t in times)))
+
     prob.objective = Minimize(sum(p.cost(t) for t in times))
-    
+
     solution = prob.solve()
-    for t in times:
-        c.activity[t].take_value(solution)
-        p.activity[t].take_value(solution)
-        s.volume[t].take_value(solution)
 
     for t in times:
-        assert approx(p.activity[t].value, 0)
-        assert approx(c.activity[t].value, consumption(t))
-        assert approx(s.volume[t].value, s.volume[t-1].value + s.accumulation[RESOURCE](t-1).evaluate({}))
+        c.activity(t).take_value(solution)
+        p.activity(t).take_value(solution)
+        s.volume(t).take_value(solution)
+
+    for t in times:
+        assert approx(p.activity(t).value, 0)
+        assert approx(c.activity(t).value, consumption(t))
+        assert approx(s.volume(t).value, s.volume(t-1).value + s.accumulation[RESOURCE](t-1).evaluate({}))
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
+from itertools import chain
+from nose.tools import raises
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork
 from friendlysam.optimization import *
 from friendlysam.optimization.pyomoengine import PyomoProblem
@@ -11,7 +13,7 @@ class Producer(Node):
 
         if indexed:
             self.activity = self.variable_collection('activity', lb=0)
-            self.production[RESOURCE] = lambda t: self.activity[t]
+            self.production[RESOURCE] = lambda t: self.activity(t)
         else:
             self.activity = self.variable('activity', lb=0)
             self.production[RESOURCE] = lambda: self.activity
@@ -24,7 +26,7 @@ class Consumer(Node):
         
         if indexed:
             self.activity = self.variable_collection('activity', lb=0)
-            self.consumption[RESOURCE] = lambda t: self.activity[t]
+            self.consumption[RESOURCE] = lambda t: self.activity(t)
             self += lambda t: (Constraint(self.consumption[RESOURCE](t) == consumption(t)),)
         else:
             self.activity = self.variable('activity', lb=0)
@@ -40,19 +42,21 @@ def test_indexed():
     consumption = lambda t: t * 1.5
     
     p = Producer(indexed=True)
+    s = Storage(RESOURCE, capacity=0)
     c = Consumer(consumption, indexed=True)
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p, c)
+    rn.add_edge(p, s)
+    rn.add_edge(s, c)
 
     prob = PyomoProblem()
-    prob.constraints = rn.constraints('inf', *times)
+    prob.constraints = tuple(chain(*(rn.constraints('inf', t) for t in times)))
     
     prob.objective = Minimize(p.production[RESOURCE](times[0]))
     
     solution = prob.solve()
     for t in times:
-        c.activity[t].take_value(solution)
-        p.activity[t].take_value(solution)
+        c.activity(t).take_value(solution)
+        p.activity(t).take_value(solution)
 
     for t in times:
         assert approx(p.production[RESOURCE](t).evaluate({}), c.consumption[RESOURCE](t).evaluate({}))
@@ -77,7 +81,10 @@ def test_not_indexed():
     assert approx(p.production[RESOURCE]().evaluate(), consumption)
     assert approx(c.consumption[RESOURCE]().evaluate(), consumption)
     
-
+@raises(TypeError)
+def test_not_indexed_w_storage():
+    s = Storage(RESOURCE)
+    s.constraints('inf')
 
 if __name__ == '__main__':
-    test_not_indexed()
+    test_indexed()

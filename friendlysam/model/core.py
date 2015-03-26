@@ -95,11 +95,7 @@ class Part(object):
                 constraints.add(func_output)
 
         for func in self._constraint_funcs:
-            if len(indices) == 0:
-                add(func())
-            else:
-                for index in indices:
-                    add(func(index))
+            add(func(*indices))
 
         # Subtract 1 from depth. This means we get only this part's constraints
         # if depth=0, etc. It is probably the expected behavior.

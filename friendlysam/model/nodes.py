@@ -79,12 +79,21 @@ class Storage(Node):
         self.maxchange = maxchange
 
         self.volume = self.variable_collection('volume', lb=0., ub=capacity)
-        self.accumulation[resource] = lambda t: self.volume[t+1] - self.volume[t]
+        self.accumulation[resource] = self._accumulation
 
         self += self._maxchange_constraints
 
-    def _maxchange_constraints(self, t):
-        acc, maxchange = self.accumulation[self.resource](t), self.maxchange
+    def _accumulation(self, t, *other_indices):
+        if len(other_indices) > 0:
+            next_index = (t+1,) + other_indices
+            this_index = (t,) + other_indices
+        else:
+            next_index = t+1
+            this_index = t
+        return self.volume(next_index) - self.volume(this_index)
+
+    def _maxchange_constraints(self, *indices):
+        acc, maxchange = self.accumulation[self.resource](*indices), self.maxchange
         if maxchange is None:
             return ()
         return (
@@ -144,8 +153,8 @@ class ResourceNetwork(Node):
 
         in_edges = self._graph.in_edges(nbunch=[node])
         out_edges = self._graph.out_edges(nbunch=[node])
-        inflow = sum([self.flows[edge][indices] for edge in in_edges])
-        outflow = sum([self.flows[edge][indices] for edge in out_edges])
+        inflow = sum([self.flows[edge](*indices) for edge in in_edges])
+        outflow = sum([self.flows[edge](*indices) for edge in out_edges])
 
         desc = 'Balance constraint ({}) for {}'
 
