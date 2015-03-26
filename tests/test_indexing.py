@@ -49,7 +49,7 @@ def test_indexed():
     rn.add_edge(s, c)
 
     prob = PyomoProblem()
-    prob.constraints = tuple(chain(*(rn.constraints('inf', t) for t in times)))
+    prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
     
     prob.objective = Minimize(p.production[RESOURCE](times[0]))
     
@@ -70,7 +70,7 @@ def test_not_indexed():
     rn.add_edge(p, c)
 
     prob = PyomoProblem()
-    prob.constraints = rn.constraints('inf')
+    prob.add_constraints(rn.constraints())
     
     prob.objective = Minimize(p.production[RESOURCE]())
     
@@ -84,7 +84,7 @@ def test_not_indexed():
 @raises(TypeError)
 def test_not_indexed_w_storage():
     s = Storage(RESOURCE)
-    s.constraints('inf')
+    s.constraints()
 
 if __name__ == '__main__':
     test_indexed()

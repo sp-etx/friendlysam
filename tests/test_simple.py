@@ -58,7 +58,7 @@ def test_basic_functionality():
     rn.add_edge(s, c)
 
     prob = PyomoProblem()
-    prob.constraints = tuple(chain(*(rn.constraints('inf', t) for t in times)))
+    prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
 

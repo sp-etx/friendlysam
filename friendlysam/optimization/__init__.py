@@ -304,8 +304,15 @@ class Problem(object):
     """An optimization problem"""
     def __init__(self, constraints=None, objective=None):
         super(Problem, self).__init__()
-        self.constraints = set() if constraints is None else constraints
+        self._constraints = set() if constraints is None else constraints
         self.objective = objective
+
+    @property
+    def constraints(self):
+        return self._constraints
+
+    def add_constraints(self, constraints):
+        self._constraints.update(constraints)
 
     def solve(self):
         """Try to solve the optimization problem"""

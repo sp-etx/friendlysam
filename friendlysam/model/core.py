@@ -86,7 +86,8 @@ class Part(object):
         return collection
 
 
-    def constraints(self, depth, *indices):
+    def constraints(self, *indices, **kwargs):
+        depth = kwargs.get('depth', 'inf')
         constraints = set()
         def add(func_output):
             try:
@@ -100,6 +101,6 @@ class Part(object):
         # Subtract 1 from depth. This means we get only this part's constraints
         # if depth=0, etc. It is probably the expected behavior.
         depth = float(depth) - 1
-        subparts = self.parts(depth)
-        return constraints.union(*[p.constraints(0, *indices) for p in subparts])
+        subparts = self.parts(depth=depth)
+        return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
 
