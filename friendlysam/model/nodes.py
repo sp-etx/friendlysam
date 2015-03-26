@@ -14,7 +14,6 @@ import networkx as nx
 
 from friendlysam.optimization import Constraint
 from friendlysam.model import Part
-from friendlysam import NOINDEX
 
 class Node(Part):
     """docstring for Node"""
@@ -26,14 +25,14 @@ class Node(Part):
 
 
 def _get_aggr_func(owner, attr_name, resource):
-    def aggregation(index=NOINDEX):
+    def aggregation(*indices):
 
         terms = []
         for part in owner.parts(0):
             func_dict = getattr(part, attr_name)
             if resource in func_dict:
                 func = func_dict[resource]
-                term = func() if index is NOINDEX else func(index)
+                term = func(*indices)
                 terms.append(term)
 
         return sum(terms)
@@ -141,11 +140,12 @@ class ResourceNetwork(Node):
         if bidirectional and (n2, n1) not in edges:
             self.add_edge(n2, n1)
 
-    def _node_balance_constraint(self, node, index):
+    def _node_balance_constraint(self, node, *indices):
+
         in_edges = self._graph.in_edges(nbunch=[node])
         out_edges = self._graph.out_edges(nbunch=[node])
-        inflow = sum([self.flows[edge][index] for edge in in_edges])
-        outflow = sum([self.flows[edge][index] for edge in out_edges])
+        inflow = sum([self.flows[edge][indices] for edge in in_edges])
+        outflow = sum([self.flows[edge][indices] for edge in out_edges])
 
         desc = 'Balance constraint ({}) for {}'
 
@@ -155,17 +155,17 @@ class ResourceNetwork(Node):
         rhs = outflow
 
         if resource in node.production:
-            lhs += node.production[resource](index)
+            lhs += node.production[resource](*indices)
 
         if resource in node.consumption:
-            rhs += node.consumption[resource](index)
+            rhs += node.consumption[resource](*indices)
 
         if resource in node.accumulation:
-            rhs += node.accumulation[resource](index)
+            rhs += node.accumulation[resource](*indices)
 
         return Constraint(lhs == rhs, desc.format(self.resource, node))
         
 
-    def _all_balance_constraints(self, index=NOINDEX):
-        constraints = set(self._node_balance_constraint(node, index) for node in self.nodes)
+    def _all_balance_constraints(self, *indices):
+        constraints = set(self._node_balance_constraint(node, *indices) for node in self.nodes)
         return constraints

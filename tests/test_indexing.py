@@ -29,12 +29,11 @@ class Consumer(Node):
         else:
             self.activity = self.variable('activity', lb=0)
             self.consumption[RESOURCE] = lambda: self.activity
-            self += lambda: (Constraint(self.consumption == consumption),)
+            self += lambda: (Constraint(self.consumption[RESOURCE]() == consumption),)
 
 
 def approx(a, b):
     return abs(a-b) <= ABSTOL
-
 
 def test_indexed():
     times = tuple(range(10))
@@ -58,6 +57,27 @@ def test_indexed():
     for t in times:
         assert approx(p.production[RESOURCE](t).evaluate({}), c.consumption[RESOURCE](t).evaluate({}))
 
+def test_not_indexed():
+    consumption = 3
+    
+    p = Producer(indexed=False)
+    c = Consumer(consumption, indexed=False)
+    rn = ResourceNetwork(RESOURCE)
+    rn.add_edge(p, c)
+
+    prob = PyomoProblem()
+    prob.constraints = rn.constraints('inf')
+    
+    prob.objective = Minimize(p.production[RESOURCE]())
+    
+    solution = prob.solve()
+    c.activity.take_value(solution)
+    p.activity.take_value(solution)
+
+    assert approx(p.production[RESOURCE]().evaluate(), consumption)
+    assert approx(c.consumption[RESOURCE]().evaluate(), consumption)
+    
+
 
 if __name__ == '__main__':
-    test_indexed()
+    test_not_indexed()
