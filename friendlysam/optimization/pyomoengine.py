@@ -77,7 +77,7 @@ class PyomoSolver(object):
             setattr(model, v.name, v)
 
         for i, c in enumerate(problem.constraints):
-            if isinstance(c, (Constraint, Relation)):
+            if isinstance(c, Constraint):
                 setattr(model,
                     'c{}'.format(i),
                     pyoenv.Constraint(expr=c.expr.evaluate(replacements=pyomo_variables)))

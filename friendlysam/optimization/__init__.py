@@ -211,13 +211,6 @@ class _ConstraintBase(object):
         super().__init__()
         self.desc = desc
 
-    def _add_desc(self, s):
-        if self.desc is None:
-            return s
-        else:
-            return '{} ({})'.format(s, self.desc)
-        
-
 class Constraint(_ConstraintBase):
     """docstring for Constraint"""
     def __init__(self, expr, desc=None):
@@ -225,7 +218,7 @@ class Constraint(_ConstraintBase):
         self.expr = expr
 
     def __str__(self):
-        return self._add_desc(str(self.expr))
+        return str(self.expr)
 
 
 class _SOS(_ConstraintBase):
@@ -238,7 +231,7 @@ class _SOS(_ConstraintBase):
         self._sostype = sostype
 
     def __str__(self):
-        return self._add_desc('SOS{}{}'.format(self._sostype, self._symbols))
+        return 'SOS{}{}'.format(self._sostype, self._symbols)
 
     @property
     def symbols(self):

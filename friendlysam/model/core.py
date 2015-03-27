@@ -9,8 +9,12 @@ from builtins import str
 from future import standard_library
 standard_library.install_aliases()
 
+from friendlysam.log import get_logger
+logger = get_logger(__name__)
+
 import friendlysam.optimization as opt
 from friendlysam.compat import ignored
+
 
 class InsanityError(Exception): pass
 
@@ -23,17 +27,43 @@ class ConstraintCollection(object):
         self._constraint_funcs = set()
         self._fixed_constraints = set()
 
+    def _prepare(self, constraint, generic_description):
+        if isinstance(constraint, opt.Relation):
+            constraint = opt.Constraint(constraint)
+
+        if not isinstance(constraint, opt.Constraint):
+            raise ValueError('cannot handle constraint {}'.format(constraint))
+
+        desc_start = '{}, {}'.format(self._owner, generic_description)
+        if constraint.desc is None:
+            constraint.desc = desc_start
+        else:
+            constraint.desc = '{}, {}'.format(desc_start, constraint.desc)
+
+        return constraint
+
+    def _func_description(self, func, *indices):
+        func_desc = func.func_name
+        if len(indices) == 1:
+            return '{}({})'.format(func_desc, indices[0])
+        else:
+            return '{}{}'.format(func_desc, indices)
+
     def __call__(self, *indices, **kwargs):
         depth = kwargs.get('depth', 'inf')
-        constraints = set(self._fixed_constraints)
-        def add(func_output):
-            try:
-                constraints.update(func_output)
-            except TypeError: # not iterable
-                constraints.add(func_output)
+
+        constraints = set()
+        constraints.update(self._prepare(c, 'Fixed constraint') for c in self._fixed_constraints)
 
         for func in self._constraint_funcs:
-            add(func(*indices))
+            func_output = func(*indices)
+            try:
+                func_output = iter(func_output)
+            except TypeError: # not iterable
+                func_output = (func_output,)
+
+            desc = self._func_description(func, *indices)
+            constraints.update(self._prepare(item, desc) for item in func_output)
 
         # Subtract 1 from depth. This means we get only this part's constraints
         # if depth=0, etc. It is probably the expected behavior.

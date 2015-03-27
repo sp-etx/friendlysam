@@ -11,7 +11,7 @@ from nose.tools import raises, assert_raises
 
 from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
-from friendlysam.optimization import Problem, Minimize, SolverError
+from friendlysam.optimization import Problem, Minimize, SolverError, Constraint, Variable
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, RESOURCE
 from friendlysam.compat import ignored
@@ -33,6 +33,8 @@ class Consumer(Node):
             self.constraints += (lambda t: cons(t) == consumption(t) for i in range(1))
         elif variant == 3:
             self.constraints += self._consumption_constraint
+        elif variant == 4:
+            self.constraints += lambda t: Constraint(cons(t) == consumption(t), 'Consumption')
         else:
             raise ValueError('variant {} not defined'.format(variant))
 
@@ -45,13 +47,10 @@ def check_variant(variant):
     consumption = lambda t: t * 1.5
 
     p = Producer(name='Producer')
-    c = Consumer(consumption, variant, name='Consumer')
+    c = Consumer(consumption, variant)
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = Problem()
-    for t in times:
-        for constr in cl.constraints(t):
-            print('{}: {}'.format(t, constr))
     prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
@@ -67,5 +66,23 @@ def check_variant(variant):
         assert approx(c.consumption[RESOURCE](t).value, consumption(t))
 
 def test_variants():
-    for variant in range(4):
+    for variant in range(5):
         yield check_variant, variant
+
+
+if __name__ == '__main__':
+    consumption = lambda t: t * 1.5
+    variant = 2
+    times = list(range(3))
+
+    p = Producer(name='Producer')
+    c = Consumer(consumption, variant)
+    cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
+
+    cl.constraints += Variable() >= 3
+
+    constr = chain(*(cl.constraints(t) for t in times))
+    for constr in sorted(constr, key=lambda c: c.desc):
+        print(constr.desc)
+        print(constr.expr)
+        print()

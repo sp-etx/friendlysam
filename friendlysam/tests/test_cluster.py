@@ -38,8 +38,8 @@ def test_cluster():
         p.activity(t).take_value(solution)
 
     for t in times:
-        assert approx(p.production[RESOURCE](t).evaluate({}), consumption(t))
-        assert approx(c.consumption[RESOURCE](t).evaluate({}), consumption(t))
+        assert approx(p.production[RESOURCE](t).value, consumption(t))
+        assert approx(c.consumption[RESOURCE](t).value, consumption(t))
 
 
 @raises(InsanityError)

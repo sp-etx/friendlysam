@@ -75,8 +75,6 @@ class Node(Part):
         inflow = sum(flow(*indices) for flow in self._inflows)
         outflow = sum(flow(*indices) for flow in self._outflows)
 
-        desc = 'Balance constraint ({}) for {}'
-
         lhs = inflow
         rhs = outflow
 
@@ -89,7 +87,7 @@ class Node(Part):
         if resource in self.accumulation:
             rhs += self.accumulation[resource](*indices)
 
-        return Constraint(lhs == rhs, desc.format(resource, self))
+        return Constraint(lhs == rhs, desc='Balance constraint (resource={})'.format(resource))
         
 
     def _all_balance_constraints(self, *indices):
@@ -205,8 +203,8 @@ class Storage(Node):
         if maxchange is None:
             return ()
         return (
-            RelConstraint(acc <= maxchange, 'Max net inflow in {}'.format(self)),
-            RelConstraint(-maxchange <= acc, 'Max net outflow from {}'.format(self)))
+            RelConstraint(acc <= maxchange, 'Max net inflow'),
+            RelConstraint(-maxchange <= acc, 'Max net outflow'))
 
 
 class ResourceNetwork(Part):
