@@ -26,23 +26,18 @@ class Consumer(Node):
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
         if variant == 0:
-            self.constraints += lambda t: cons(t) == consumption(t) ['Consumption constraint']
-        elif variant == 1:
             self.constraints += lambda t: cons(t) == consumption(t)
+        elif variant == 1:
+            self.constraints += lambda t: (cons(t) == consumption(t), cons(t) == cons(t))
         elif variant == 2:
-            self.constraints += (
-                lambda t: cons(t) == consumption(t) ['Consumption constraint'], 
-                cons(t) == cons(t))
+            self.constraints += (lambda t: cons(t) == consumption(t) for i in range(1))
         elif variant == 3:
-            self.constraints += (
-                lambda t: cons(t) == consumption(t) ['Consumption constraint'] for i in range(1))
-        elif variant == 4:
             self.constraints += self._consumption_constraint
         else:
             raise ValueError('variant {} not defined'.format(variant))
 
     def _consumption_constraint(self, t):
-        return self.consumption[RESOURCE] == self._cons_func(t)
+        return self.consumption[RESOURCE](t) == self._cons_func(t)
 
 
 def check_variant(variant):
@@ -54,6 +49,9 @@ def check_variant(variant):
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = Problem()
+    for t in times:
+        for constr in cl.constraints(t):
+            print('{}: {}'.format(t, constr))
     prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
@@ -69,5 +67,5 @@ def check_variant(variant):
         assert approx(c.consumption[RESOURCE](t).value, consumption(t))
 
 def test_variants():
-    for variant in range(5):
+    for variant in range(4):
         yield check_variant, variant
