@@ -10,6 +10,7 @@ from future import standard_library
 standard_library.install_aliases()
 
 import friendlysam.optimization as opt
+from friendlysam.compat import ignored
 
 class InsanityError(Exception): pass
 
@@ -71,7 +72,8 @@ class Part(object):
 
 
     def remove_part(self, p):
-        self._parts.remove(p)
+        with ignored(KeyError):
+            self._parts.remove(p)
 
 
     def add_parts(self, *parts):

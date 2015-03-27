@@ -7,7 +7,7 @@ from builtins import super
 from future import standard_library
 standard_library.install_aliases()
 
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 
 from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
@@ -87,6 +87,35 @@ def test_cluster_balance_constraint():
     assert len(n.constraints()) == 1
 
 
+def test_cluster_add_remove():
+    n = Node()
+    n.production[RESOURCE] = lambda: 0
+    c = Cluster(resource=RESOURCE)
+
+    def not_added():
+        return c.parts() == set() and n.cluster(RESOURCE) is None
+
+    def added():
+        return c.parts() == {n} and n.cluster(RESOURCE) is c
+
+    assert not_added()
+    c.add_part(n)
+    assert added()
+    c.add_part(n)
+
+    c.remove_part(n)
+    assert not_added()
+    c.remove_part(n)
+    
+    n.set_cluster(c)
+    assert added()
+    assert_raises(InsanityError, n.set_cluster, c)
+
+    n.unset_cluster(c)
+    assert not_added()
+    assert_raises(InsanityError, n.unset_cluster, c)
+
+
 @raises(SolverError)
 def test_balance():
     times = range(1,4)
@@ -104,4 +133,4 @@ def test_balance():
 
 
 if __name__ == '__main__':
-    test_cluster_balance_constraint()
+    test_cluster_add_remove()

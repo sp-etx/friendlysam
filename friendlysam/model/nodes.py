@@ -46,9 +46,29 @@ class Node(Part):
 
     def set_cluster(self, cluster):
         res = cluster.resource
-        if res in self._clusters and self._clusters[res] is not cluster:
-            raise InsanityError('already clustered with that resource!')
-        self._clusters[res] = cluster
+        if res in self._clusters:
+            if self._clusters[res] is not cluster:
+                raise InsanityError('already in another cluster with that resource!')
+            else:
+                raise InsanityError('this has already been done')
+        else:
+            self._clusters[res] = cluster
+
+        if not self in cluster.parts(0):
+            cluster.add_part(self)
+
+
+    def unset_cluster(self, cluster):
+        res = cluster.resource
+        if not (res in self._clusters and self._clusters[res] is cluster):
+            raise InsanityError('cannot unset Cluster {} because it is not set'.format(cluster))        
+        del self._clusters[res]
+        if self in cluster.parts(0):
+            cluster.remove_part(self)
+
+
+    def cluster(self, resource):
+        return self._clusters.get(resource, None)
 
 
     def _balance_constraint(self, resource, *indices):
@@ -140,11 +160,18 @@ class Cluster(Node):
 
     def add_part(self, part):
         super().add_part(part)
-        try:
-            part.set_cluster(self)
-        except InsanityError as e:
-            super().remove_part(part)
-            raise e
+        if not part.cluster(self.resource) is self:
+            try:
+                part.set_cluster(self) # May raise an exception.
+            except InsanityError as e:
+                super().remove_part(part) # Roll back on exception.
+                raise e
+
+
+    def remove_part(self, part):
+        super().remove_part(part)
+        if part.cluster(self.resource) is not None:
+            part.unset_cluster(self)
 
 
 class Storage(Node):
