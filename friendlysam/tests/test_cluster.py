@@ -11,38 +11,10 @@ from nose.tools import raises, assert_raises
 
 from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
-from friendlysam.optimization import *
-from friendlysam.optimization.pyomoengine import PyomoSolver
+from friendlysam.optimization import Problem, Minimize, SolverError
+from friendlysam.tests import default_solver, approx
+from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 
-RESOURCE = 0
-ABSTOL = 1e-6
-
-class Producer(Node):
-    """docstring for Producer"""
-    def __init__(self, param, **kwargs):
-        super(Producer, self).__init__(**kwargs)
-
-        self.activity = self.variable_collection('activity', lb=0)
-
-        self.production[RESOURCE] = lambda t: self.activity(t) * 2
-
-        self.cost = lambda t: param(t) * self.activity(t)
-
-
-class Consumer(Node):
-    """docstring for Consumer"""
-    def __init__(self, param, **kwargs):
-        super(Consumer, self).__init__(**kwargs)
-        
-        self.activity = self.variable_collection('activity', lb=0)
-        self.consumption[RESOURCE] = self.activity
-        cons = self.consumption[RESOURCE]
-
-        self += lambda t: (Constraint(cons(t) == param(t)),)
-
-
-def approx(a, b):
-    return abs(a-b) <= ABSTOL
 
 
 def test_cluster():
@@ -50,7 +22,7 @@ def test_cluster():
 
     consumption = lambda t: t * 1.5
 
-    p = Producer(lambda t: t ** 2, name='Producer')
+    p = Producer(name='Producer')
     c = Consumer(consumption, name='Consumer')
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
@@ -59,7 +31,7 @@ def test_cluster():
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
 
-    solution = PyomoSolver().solve(prob)
+    solution = default_solver.solve(prob)
 
     for t in times:
         c.activity(t).take_value(solution)
@@ -117,20 +89,16 @@ def test_cluster_add_remove():
 
 
 @raises(SolverError)
-def test_balance():
-    times = range(1,4)
+def test_balance_simple():
 
-    consumption = lambda t: t * 1.5
-
+    time = 0
+    consumption = lambda t: 1
     c = Consumer(consumption, name='Consumer')
 
     prob = Problem()
-    prob.add_constraints(chain(*(c.constraints(t) for t in times)))
+    prob.add_constraints(c.constraints(time))
 
-    prob.objective = Minimize(sum(c.consumption[RESOURCE](t) for t in times))
+    prob.objective = Minimize(c.consumption[RESOURCE](time))
 
-    solution = PyomoSolver().solve(prob)
-
-
-if __name__ == '__main__':
-    test_cluster_add_remove()
+    # Raises SolverError because the consumer wants to consume but noone delivers
+    solution = default_solver.solve(prob)
