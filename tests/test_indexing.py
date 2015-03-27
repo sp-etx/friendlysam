@@ -53,8 +53,8 @@ def test_indexed():
     s = Storage(RESOURCE, capacity=0)
     c = Consumer(consumption, indexed=True)
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p, s)
-    rn.add_edge(s, c)
+    rn.connect(p, s)
+    rn.connect(s, c)
 
     prob = Problem()
     prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
@@ -75,7 +75,7 @@ def test_not_indexed():
     p = Producer(indexed=False)
     c = Consumer(consumption, indexed=False)
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p, c)
+    rn.connect(p, c)
 
     prob = Problem()
     prob.add_constraints(rn.constraints())

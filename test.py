@@ -44,8 +44,8 @@ def main():
     c = Consumer(lambda t: t, name='Consumer')
     s = Storage(RESOURCE, capacity=15, name='Storage')
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p, s)
-    rn.add_edge(s, c)
+    rn.connect(p, s)
+    rn.connect(s, c)
 
     prob = PyomoProblem()
     prob.constraints = rn.constraints('inf', *times)
@@ -68,7 +68,7 @@ def main():
     s = Storage(RESOURCE, capacity=10, name='Storage')
     cluster = Cluster(p2, c, s)
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p1, cluster)
+    rn.connect(p1, cluster)
     rn += lambda t: (Constraint(rn.flows[(p1, cluster)][t] <= 3.3),)
 
 

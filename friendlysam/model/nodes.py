@@ -195,13 +195,10 @@ class ResourceNetwork(Part):
     def edges(self):
         return self._graph.edges()
 
-    def add_nodes(self, *nodes):
-        map(self.add_node, nodes)
-
     def remove_part(self, part):
         raise NotImplementedError('need to also remove edges then')
 
-    def add_edge(self, n1, n2, bidirectional=False):
+    def connect(self, n1, n2, bidirectional=False):
         edges = self._graph.edges()
             
         if not (n1, n2) in edges:
@@ -214,4 +211,4 @@ class ResourceNetwork(Part):
             n2.inflows.add(flow)
 
         if bidirectional and (n2, n1) not in edges:
-            self.add_edge(n2, n1)
+            self.connect(n2, n1)

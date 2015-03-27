@@ -54,8 +54,8 @@ def test_basic_functionality():
     s = Storage(RESOURCE, capacity=15, name='Storage')
     s.volume(0).value = V0
     rn = ResourceNetwork(RESOURCE)
-    rn.add_edge(p, s)
-    rn.add_edge(s, c)
+    rn.connect(p, s)
+    rn.connect(s, c)
 
     prob = Problem()
     prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
