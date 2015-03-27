@@ -187,7 +187,11 @@ class Storage(Node):
 
         self += self._maxchange_constraints
 
-    def _accumulation(self, t, *other_indices):
+    def _accumulation(self, *indices):
+        if len(indices) == 0:
+            raise InsanityError('Storage accumulation needs at least one index. '
+                'The first index should represent time.')
+        t, other_indices = indices[0], indices[1:]
         if len(other_indices) > 0:
             next_index = (t+1,) + other_indices
             this_index = (t,) + other_indices
