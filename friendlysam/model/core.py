@@ -99,10 +99,6 @@ class Part(object):
             raise ValueError(
                 "'" + str(self) + "' has more than one part '" + name + "'")
 
-    def __iadd__(self, other):
-        self._constraints.add(other)
-        return self
-
 
     def parts(self, depth='inf'):
         parts = set()

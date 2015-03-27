@@ -31,7 +31,7 @@ class Node(Part):
 
         self._clusters = dict()
 
-        self += self._all_balance_constraints
+        self.constraints += self._all_balance_constraints
 
 
     @property
@@ -185,7 +185,7 @@ class Storage(Node):
         self.volume = self.variable_collection('volume', lb=0., ub=capacity)
         self.accumulation[resource] = self._accumulation
 
-        self += self._maxchange_constraints
+        self.constraints += self._maxchange_constraints
 
     def _accumulation(self, *indices):
         if len(indices) == 0:
