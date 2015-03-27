@@ -44,8 +44,8 @@ def test_basic_functionality():
 
     for t in times:
         assert approx(p.activity(t).value, 0)
-        assert approx(c.consumption[RESOURCE](t).evaluate({}), consumption(t))
-        assert approx(s.volume(t).value, s.volume(t-1).value + s.accumulation[RESOURCE](t-1).evaluate({}))
+        assert approx(c.consumption[RESOURCE](t).value, consumption(t))
+        assert approx(s.volume(t).value, s.volume(t-1).value + s.accumulation[RESOURCE](t-1).value)
 
 
 @raises(InsanityError)

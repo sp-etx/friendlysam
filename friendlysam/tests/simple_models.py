@@ -30,4 +30,4 @@ class Consumer(Node):
         self.activity = self.variable_collection('activity', lb=0)
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
-        self += lambda t: (Constraint(cons(t) == consumption(t), 'Consumption constraint'),)
+        self.constraints += lambda t: Constraint(cons(t) == consumption(t), 'Consumption constraint')
