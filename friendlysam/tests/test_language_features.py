@@ -81,8 +81,8 @@ if __name__ == '__main__':
 
     cl.constraints += Variable() >= 3
 
-    constr = chain(*(cl.constraints(t) for t in times))
+    constr = set(chain(*(cl.constraints(t) for t in times)))
     for constr in sorted(constr, key=lambda c: c.desc):
         print(constr.desc)
-        print(constr.expr)
+        print(constr)
         print()
