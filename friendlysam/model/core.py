@@ -59,9 +59,6 @@ class ConstraintCollection(object):
         self.__iadd__(addition)
 
 
-
-
-
 class Part(object):
     """docstring for Part"""
 
@@ -80,7 +77,13 @@ class Part(object):
 
     @property
     def constraints(self):
-        return self._constraints    
+        return self._constraints
+
+    @constraints.setter
+    def constraints(self, value):
+        if value is not self._constraints:
+            raise ValueError('you are not allowed to change this one')
+
 
     def __str__(self):
         return self.name

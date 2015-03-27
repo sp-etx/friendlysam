@@ -40,6 +40,10 @@ class _Expression(object):
         return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
 
     @property
+    def value(self):
+        return float(self.evaluate({}))
+
+    @property
     def leaves(self):
         leaves = set()
         for a in self._args:
@@ -52,20 +56,26 @@ class _Expression(object):
     def __str__(self):
         return self._format.format(*self._args)
 
+class Relation(_Expression):
 
-class LessEqual(_Expression):
+    @property
+    def expr(self):
+        return self
+
+
+class LessEqual(Relation):
     _format = '({} <= {})'
 
     def _evaluate(self, a, b):
         return a <= b
 
-class GreaterEqual(_Expression):
+class GreaterEqual(Relation):
     _format = '({} >= {})'
 
     def _evaluate(self, a, b):
         return a >= b
 
-class Equals(_Expression):
+class Equals(Relation):
     _format = '({} == {})'
 
     def _evaluate(self, a, b):

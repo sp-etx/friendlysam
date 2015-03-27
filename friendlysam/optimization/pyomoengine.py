@@ -21,7 +21,7 @@ import pyomo.opt
 from pyomo.opt import SolverFactory
 
 from friendlysam.optimization import (
-    Problem, Variable, Constraint, SOS1, SOS2, Maximize, Minimize, Domain, SolverError)
+    Problem, Variable, Constraint, Relation, SOS1, SOS2, Maximize, Minimize, Domain, SolverError)
 
 DEFAULT_OPTIONS = dict(
     solver_order=[
@@ -77,7 +77,7 @@ class PyomoSolver(object):
             setattr(model, v.name, v)
 
         for i, c in enumerate(problem.constraints):
-            if isinstance(c, Constraint):
+            if isinstance(c, (Constraint, Relation)):
                 setattr(model,
                     'c{}'.format(i),
                     pyoenv.Constraint(expr=c.expr.evaluate(replacements=pyomo_variables)))
