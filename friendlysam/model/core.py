@@ -14,13 +14,61 @@ from friendlysam.compat import ignored
 
 class InsanityError(Exception): pass
 
+
+class ConstraintCollection(object):
+    """docstring for ConstraintCollection"""
+    def __init__(self, owner):
+        super().__init__()
+        self._owner = owner
+        self._constraint_funcs = set()
+        self._fixed_constraints = set()
+
+    def __call__(self, *indices, **kwargs):
+        depth = kwargs.get('depth', 'inf')
+        constraints = set(self._fixed_constraints)
+        def add(func_output):
+            try:
+                constraints.update(func_output)
+            except TypeError: # not iterable
+                constraints.add(func_output)
+
+        for func in self._constraint_funcs:
+            add(func(*indices))
+
+        # Subtract 1 from depth. This means we get only this part's constraints
+        # if depth=0, etc. It is probably the expected behavior.
+        depth = float(depth) - 1
+        subparts = self._owner.parts(depth=depth)
+        return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
+
+    def _add_one(self, constraint):
+        destination = self._constraint_funcs if callable(constraint) else self._fixed_constraints
+        destination.add(constraint)
+
+    def __iadd__(self, addition):
+        try:
+            iterator = iter(addition)
+        except TypeError:
+            self._add_one(addition)
+        else:
+            for item in iterator:
+                self._add_one(item)
+        return self
+
+    def add(self, addition):
+        self.__iadd__(addition)
+
+
+
+
+
 class Part(object):
     """docstring for Part"""
 
     _part_counter = 0
 
     def __init__(self, name=None):
-        self._constraint_funcs = set()
+        self._constraints = ConstraintCollection(self)
         self._model = None
         Part._part_counter += 1
         
@@ -29,6 +77,10 @@ class Part(object):
         self.name = name
 
         self._parts = set()
+
+    @property
+    def constraints(self):
+        return self._constraints    
 
     def __str__(self):
         return self.name
@@ -45,11 +97,7 @@ class Part(object):
                 "'" + str(self) + "' has more than one part '" + name + "'")
 
     def __iadd__(self, other):
-        if callable(other):
-            self._constraint_funcs.add(other)
-        else:
-            raise ValueError("'{}' cannot be added to '{}'".format(other, self))
-
+        self._constraints.add(other)
         return self
 
 
@@ -91,23 +139,3 @@ class Part(object):
         name = '{}.{}'.format(self.name, name)
         collection = opt.VariableCollection(name=name, **kwargs)
         return collection
-
-
-    def constraints(self, *indices, **kwargs):
-        depth = kwargs.get('depth', 'inf')
-        constraints = set()
-        def add(func_output):
-            try:
-                constraints.update(func_output)
-            except TypeError: # not iterable
-                constraints.add(func_output)
-
-        for func in self._constraint_funcs:
-            add(func(*indices))
-
-        # Subtract 1 from depth. This means we get only this part's constraints
-        # if depth=0, etc. It is probably the expected behavior.
-        depth = float(depth) - 1
-        subparts = self.parts(depth=depth)
-        return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
-
