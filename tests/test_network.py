@@ -77,6 +77,16 @@ def test_cluster_insanity():
     Cluster(n, resource=RESOURCE)
 
 
+def test_cluster_balance_constraint():
+    n = Node()
+    n.production[RESOURCE] = lambda: 0
+    assert len(n.constraints()) == 1
+    c = Cluster(n, resource=RESOURCE)
+    assert len(n.constraints()) == 0
+    c.remove_part(n)
+    assert len(n.constraints()) == 1
+
+
 @raises(SolverError)
 def test_balance():
     times = range(1,4)
@@ -94,4 +104,4 @@ def test_balance():
 
 
 if __name__ == '__main__':
-    test_cluster_insanity()
+    test_cluster_balance_constraint()
