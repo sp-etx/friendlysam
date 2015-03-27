@@ -18,7 +18,7 @@ from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 
 
 def test_cluster():
-    times = range(1,4)
+    times = list(range(1,4))
 
     consumption = lambda t: t * 1.5
 
