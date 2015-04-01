@@ -65,22 +65,16 @@ def check_variant(variant):
         assert approx(p.production[RESOURCE](t).value, consumption(t))
         assert approx(c.consumption[RESOURCE](t).value, consumption(t))
 
+
+@raises(RuntimeError)
+def non_callable_constraint():
+    cl = Cluster(resource=RESOURCE)
+    cl.constraints += Variable() == 3
+
 def test_variants():
     for variant in range(5):
         yield check_variant, variant
 
 
 if __name__ == '__main__':
-    consumption = lambda t: t * 1.5
-    variant = 2
-    times = list(range(3))
-
-    p = Producer(name='Producer')
-    c = Consumer(consumption, variant)
-    cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
-
-    constr = chain(*(cl.constraints(t) for t in times))
-    for constr in sorted(constr, key=lambda c: c.desc):
-        print('{} :: {}'.format(constr.origin, constr.desc))
-        print(constr.expr)
-        print()
+    non_callable_constraint()
