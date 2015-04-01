@@ -30,7 +30,7 @@ DEFAULT_OPTIONS = dict(
     ])
 
 def _variables_without_value(prob):
-    leaves = chain(prob.objective.leaves, *(c.leaves for c in prob.constraints))
+    leaves = chain(prob.objective.expr.leaves, *(c.expr.leaves for c in prob.constraints))
     return (l for l in leaves if isinstance(l, Variable) and not hasattr(l, 'value'))
 
 _domain_mapping = {
@@ -80,7 +80,7 @@ class PyomoSolver(object):
             if isinstance(c, Constraint):
                 setattr(model,
                     'c{}'.format(i),
-                    pyoenv.Constraint(expr=c.evaluate(replacements=pyomo_variables)))
+                    pyoenv.Constraint(expr=c.expr.evaluate(replacements=pyomo_variables)))
                 
             elif isinstance(c, SOS1):
                 raise NotImplementedError()
@@ -96,7 +96,7 @@ class PyomoSolver(object):
         elif isinstance(problem.objective, Maximize):
             sense = pyoenv.maximize
         model.objective = pyoenv.Objective(
-            expr=problem.objective.evaluate(replacements=pyomo_variables), sense=sense)
+            expr=problem.objective.expr.evaluate(replacements=pyomo_variables), sense=sense)
 
         model.preprocess()
 

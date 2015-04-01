@@ -35,7 +35,6 @@ class _Expression(object):
     def __init__(self, *args):
         super().__init__()
         self._args = tuple(args)
-        self.desc = None
 
     def evaluate(self, replacements):
         return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
@@ -57,7 +56,12 @@ class _Expression(object):
     def __str__(self):
         return self._format.format(*self._args)
 
-class Relation(_Expression): pass
+class Relation(_Expression):
+
+    @property
+    def expr(self):
+        return self
+
 
 class LessEqual(Relation):
     _format = '({} <= {})'
@@ -201,18 +205,26 @@ class VariableCollection(object):
 class ConstraintError(Exception): pass
 
 
-class Constraint(object):
+class _ConstraintBase(object):
+    """docstring for _ConstraintBase"""
+    def __init__(self, desc=None):
+        super().__init__()
+        self.desc = desc
+
+class Constraint(_ConstraintBase):
     """docstring for Constraint"""
-    def __new__(self, expr, desc=None):
-        expr.desc = desc
-        return expr
+    def __init__(self, expr, desc=None):
+        super().__init__(desc)
+        self.expr = expr
+
+    def __str__(self):
+        return str(self.expr)
 
 
-class _SOS(object):
+class _SOS(_ConstraintBase):
     """docstring for _SOS"""
     def __init__(self, sostype, symbols, desc=None):
         super().__init__(desc)
-        self.desc = None
         if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
@@ -240,8 +252,9 @@ class SOS2(_SOS):
 
 class _Objective(object):
     """docstring for _Objective"""
-    def __new__(self, expr):
-        return expr
+    def __init__(self, expr):
+        super().__init__()
+        self.expr = expr
 
 class Maximize(_Objective):
     """docstring for Maximize"""

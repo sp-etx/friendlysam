@@ -28,7 +28,10 @@ class ConstraintCollection(object):
         self._fixed_constraints = set()
 
     def _prepare(self, constraint, generic_description):
-        if not isinstance(constraint, opt.Relation):
+        if isinstance(constraint, opt.Relation):
+            constraint = opt.Constraint(constraint)
+
+        if not isinstance(constraint, opt.Constraint):
             raise ValueError('cannot handle constraint {}'.format(constraint))
 
         desc_start = '{}, {}'.format(self._owner, generic_description)
