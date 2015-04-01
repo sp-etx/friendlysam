@@ -25,20 +25,16 @@ class ConstraintCollection(object):
         super().__init__()
         self._owner = owner
         self._constraint_funcs = set()
-        self._fixed_constraints = set()
 
-    def _prepare(self, constraint, generic_description):
+    def _prepare(self, constraint, origin_desc):
         if isinstance(constraint, opt.Relation):
             constraint = opt.Constraint(constraint)
 
         if not isinstance(constraint, opt.Constraint):
             raise ValueError('cannot handle constraint {}'.format(constraint))
 
-        desc_start = '{}, {}'.format(self._owner, generic_description)
-        if constraint.desc is None:
-            constraint.desc = desc_start
-        else:
-            constraint.desc = '{}, {}'.format(desc_start, constraint.desc)
+        if constraint.origin is None:
+            constraint.origin = '{}, {}'.format(self._owner, origin_desc)
 
         return constraint
 
@@ -53,7 +49,6 @@ class ConstraintCollection(object):
         depth = kwargs.get('depth', 'inf')
 
         constraints = set()
-        constraints.update(self._prepare(c, 'Fixed constraint') for c in self._fixed_constraints)
 
         for func in self._constraint_funcs:
             func_output = func(*indices)
@@ -62,8 +57,8 @@ class ConstraintCollection(object):
             except TypeError: # not iterable
                 func_output = (func_output,)
 
-            desc = self._func_description(func, *indices)
-            constraints.update(self._prepare(item, desc) for item in func_output)
+            func_desc = self._func_description(func, *indices)
+            constraints.update(self._prepare(item, func_desc) for item in func_output)
 
         # Subtract 1 from depth. This means we get only this part's constraints
         # if depth=0, etc. It is probably the expected behavior.
@@ -71,22 +66,18 @@ class ConstraintCollection(object):
         subparts = self._owner.parts(depth=depth)
         return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
 
-    def _add_one(self, constraint):
-        destination = self._constraint_funcs if callable(constraint) else self._fixed_constraints
-        destination.add(constraint)
+    def _add_constraint_func(self, func):
+        if not callable(func):
+            raise RuntimeError('constraint funcs must be callable but {} is not'.format(func))
+        self._constraint_funcs.add(func)
 
     def __iadd__(self, addition):
         try:
-            iterator = iter(addition)
+            for func in addition:
+                self._add_constraint_func(func)
         except TypeError:
-            self._add_one(addition)
-        else:
-            for item in iterator:
-                self._add_one(item)
+            self._add_constraint_func(addition)
         return self
-
-    def add(self, addition):
-        self.__iadd__(addition)
 
 
 class Part(object):

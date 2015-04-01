@@ -207,14 +207,15 @@ class ConstraintError(Exception): pass
 
 class _ConstraintBase(object):
     """docstring for _ConstraintBase"""
-    def __init__(self, desc=None):
+    def __init__(self, desc=None, origin=None):
         super().__init__()
         self.desc = desc
+        self.origin = origin
 
 class Constraint(_ConstraintBase):
     """docstring for Constraint"""
-    def __init__(self, expr, desc=None):
-        super().__init__(desc)
+    def __init__(self, expr, desc=None, **kwargs):
+        super().__init__(desc=desc, **kwargs)
         self.expr = expr
 
     def __str__(self):
@@ -223,8 +224,8 @@ class Constraint(_ConstraintBase):
 
 class _SOS(_ConstraintBase):
     """docstring for _SOS"""
-    def __init__(self, sostype, symbols, desc=None):
-        super().__init__(desc)
+    def __init__(self, sostype, symbols, **kwargs):
+        super().__init__(**kwargs)
         if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
             raise ConstraintError('symbols must be a tuple or list')
         self._symbols = tuple(symbols)
@@ -240,14 +241,14 @@ class _SOS(_ConstraintBase):
 
 class SOS1(_SOS):
     """docstring for SOS1"""
-    def __init__(self, symbols, desc=None):
-        super().__init__(1, symbols, desc=desc)
+    def __init__(self, symbols, **kwargs):
+        super().__init__(1, symbols, **kwargs)
 
 
 class SOS2(_SOS):
     """docstring for SOS2"""
-    def __init__(self, symbols, desc=None):
-        super().__init__(2, symbols, desc=desc)
+    def __init__(self, symbols, **kwargs):
+        super().__init__(2, symbols, **kwargs)
 
 
 class _Objective(object):

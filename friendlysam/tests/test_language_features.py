@@ -79,10 +79,8 @@ if __name__ == '__main__':
     c = Consumer(consumption, variant)
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
-    cl.constraints += Variable() >= 3
-
     constr = chain(*(cl.constraints(t) for t in times))
     for constr in sorted(constr, key=lambda c: c.desc):
-        print(constr.desc)
+        print('{} :: {}'.format(constr.origin, constr.desc))
         print(constr.expr)
         print()
