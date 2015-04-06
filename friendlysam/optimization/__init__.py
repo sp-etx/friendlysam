@@ -177,15 +177,6 @@ class Variable(_MathEnabled):
     def take_value(self, solution):
         self.value = solution[self]
 
-    def constraint_func(self, *indices):
-        # Not used in this implementation, but in principle a Variable may produce constraints
-        # which should be added to to any optimization problem where the variable is used.
-        # This was used to produce upper and lower bounds in the previous implementation 
-        # which used sympy symbols instead of Pyomo variables.
-        #
-        # It is still used in the subclass PiecewiseAffineArg.
-        return set()
-
 
 class VariableCollection(object):
     """docstring for VariableCollection"""
@@ -266,45 +257,48 @@ class Minimize(_Objective):
     pass
 
 
+class PiecewiseAffine(object):
+    """docstring for PiecewiseAffine"""
+    def __init__(self, points, name=None):
+        self._name_base = name
+        self._points = tuple(p for p in points)
+        self._weights = tuple(self._make_variable(p) for p in points)
+        self._arg = self.func(self._points)
+
+        self._constraints = (
+            SOS2(self._weights, desc='PiecewiseAffine weights'),
+            Constraint(sum(self._weights) == 1, desc='PiecewiseAffine sum of weights'))
 
 
-# class PiecewiseAffineArg(Variable):
-#     """docstring for Variable"""
-#     def __init__(self, name, points):
-#         super().__init__(name)
-#         self.points = points
-#         SymbolCatalog().register(self, self._symbol_options)
+    @property
+    def weights(self):
+        return self._weights
 
-#     def __call__(self, index=None):
-#         return self.weighted_sum(index)
 
-#     def weighted_sum(self, index):
-#         return sum([point * weight for point, weight in zip(self.points, self.weights(index))])
+    @property
+    def points(self):
+        return self._points
 
-#     def weights(self, index):
-#         cat = SymbolCatalog()
-#         return tuple(cat.get(self, (index, point)) for point in self.points)
 
-#     def _symbol_options(self, (index, point)):
-#         if index is None:
-#             name = '{}_{}'.format(self.name, point)
-#         else:
-#             name = '{}_{}[{}]'.format(self.name, point, index)
+    @property
+    def constraints(self):
+        return self._constraints
 
-#         return dict(name=name, bounds=(0, 1), domain=Domain.real)
-    
-#     def replace_symbols(self, data, indices):
-#         for index, symbol in indices:
-#             for point in self.points:
-#                 if symbol in data:
-#                     SymbolCatalog().set(self, (index, point), data[symbol])
 
-#     def constraint_func(self, index):
-#         weights = self.weights(index)
-#         constraints = (
-#             SOS2(weights, desc='Weights of points in piecewise affine expression'),
-#             Constraint(sum(weights) == 1, desc='Sum of weights in piecewise affine expression'))
-#         return constraints
+    @property
+    def arg(self):
+        return self._arg
+
+
+    def _make_variable(self, point):
+        return Variable(
+            name='{}_{}'.format(self._name_base, point),
+            lb=0,
+            ub=1,
+            domain=Domain.real)
+
+    def func(self, values):
+        return sum(val * weight for val, weight in zip(values, self._weights))
 
 
 class Problem(object):
