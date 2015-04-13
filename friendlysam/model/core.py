@@ -39,7 +39,7 @@ class ConstraintCollection(object):
         return constraint
 
     def _func_description(self, func, *indices):
-        func_desc = func.func_name
+        func_desc = func.__name__
         if len(indices) == 1:
             return '{}({})'.format(func_desc, indices[0])
         else:
