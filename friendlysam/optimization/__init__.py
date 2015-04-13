@@ -11,7 +11,7 @@ standard_library.install_aliases()
 from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
-import itertools
+from itertools import chain
 from enum import Enum
 
 from friendlysam.compat import ignored
@@ -203,6 +203,11 @@ class _ConstraintBase(object):
         self.desc = desc
         self.origin = origin
 
+    @property
+    def variables(self):
+        raise NotImplementedError()
+
+
 class Constraint(_ConstraintBase):
     """docstring for Constraint"""
     def __init__(self, expr, desc=None, **kwargs):
@@ -213,33 +218,44 @@ class Constraint(_ConstraintBase):
         return str(self.expr)
 
 
+    @property
+    def variables(self):
+        return tuple(l for l in self.expr.leaves if isinstance(l, Variable))
+    
+
+
 class _SOS(_ConstraintBase):
     """docstring for _SOS"""
-    def __init__(self, sostype, symbols, **kwargs):
+    def __init__(self, level, variables, **kwargs):
         super().__init__(**kwargs)
-        if not (isinstance(symbols, tuple) or isinstance(symbols, list)):
-            raise ConstraintError('symbols must be a tuple or list')
-        self._symbols = tuple(symbols)
-        self._sostype = sostype
-
-    def __str__(self):
-        return 'SOS{}{}'.format(self._sostype, self._symbols)
+        if not (isinstance(variables, tuple) or isinstance(variables, list)):
+            raise ConstraintError('variables must be a tuple or list')
+        self._variables = tuple(variables)
+        self._level = level
 
     @property
-    def symbols(self):
-        return self._symbols
+    def level(self):
+        return self._level
+    
+
+    def __str__(self):
+        return 'SOS{}{}'.format(self._level, self._variables)
+
+    @property
+    def variables(self):
+        return self._variables
 
 
 class SOS1(_SOS):
     """docstring for SOS1"""
-    def __init__(self, symbols, **kwargs):
-        super().__init__(1, symbols, **kwargs)
+    def __init__(self, variables, **kwargs):
+        super().__init__(1, variables, **kwargs)
 
 
 class SOS2(_SOS):
     """docstring for SOS2"""
-    def __init__(self, symbols, **kwargs):
-        super().__init__(2, symbols, **kwargs)
+    def __init__(self, variables, **kwargs):
+        super().__init__(2, variables, **kwargs)
 
 
 class _Objective(object):
@@ -247,6 +263,11 @@ class _Objective(object):
     def __init__(self, expr):
         super().__init__()
         self.expr = expr
+
+    @property
+    def variables(self):
+        return tuple(l for l in self.expr.leaves if isinstance(l, Variable))
+    
 
 class Maximize(_Objective):
     """docstring for Maximize"""
@@ -265,9 +286,11 @@ class PiecewiseAffine(object):
         self._weights = tuple(self._make_variable(p) for p in points)
         self._arg = self.func(self._points)
 
-        self._constraints = (
+        self._constraints = ((
             SOS2(self._weights, desc='PiecewiseAffine weights'),
-            Constraint(sum(self._weights) == 1, desc='PiecewiseAffine sum of weights'))
+            Constraint(sum(self._weights) == 1, desc='PiecewiseAffine sum of weights')) +
+            tuple(Constraint(w >= 0, 'Nonnegative weight in PiecewiseAffine')
+                  for w in self._weights))
 
 
     @property
