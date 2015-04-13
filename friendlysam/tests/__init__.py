@@ -9,10 +9,9 @@ from builtins import super
 from future import standard_library
 standard_library.install_aliases()
 
-from friendlysam.optimization.pyomoengine import PyomoSolver
+from friendlysam.optimization.pulpengine import PulpSolver
 
-default_solver = PyomoSolver()
-default_solver.options['solver_order'] = [dict(name='cbc', solver_io='nl')]
+default_solver = PulpSolver()
 
 ABSTOL = 1e-6
 
