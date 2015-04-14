@@ -11,10 +11,26 @@ standard_library.install_aliases()
 from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
+from contextlib import contextmanager
 from itertools import chain
 from enum import Enum
 
 from friendlysam.compat import ignored
+
+_namespace_string = ''
+
+def rename_namespace(s):
+    global _namespace_string
+    return '{}.{}'.format(_namespace_string, s)
+
+@contextmanager
+def namespace(name):
+    global _namespace_string
+    old = _namespace_string
+    _namespace_string = str(name)
+    yield
+    _namespace_string = old
+
 
 class SolverError(Exception): pass
         
@@ -150,19 +166,15 @@ class Variable(_MathEnabled):
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
         super().__init__()
         self._counter += 1
-        self._name = 'x{}'.format(self._counter) if name is None else name
+        self.name = 'x{}'.format(self._counter) if name is None else name
+        self.name = rename_namespace(self.name)
         self.lb = lb
         self.ub = ub
         self.domain = domain
         self.constraints = set()
 
     def __str__(self):
-        return self._name
-
-    @property
-    def name(self):
-        return self._name
-
+        return self.name
 
     @property
     def leaves(self):
@@ -185,14 +197,17 @@ class VariableCollection(object):
     """docstring for VariableCollection"""
     def __init__(self, name=None, **kwargs):
         super().__init__()
+        self._namespace_string = _namespace_string
         self.name = name
         self._kwargs = kwargs
         self._vars = {}
 
     def __call__(self, *indices):
         if not indices in self._vars:
-            name = '{}{}'.format(self.name, indices)
-            self._vars[indices] = Variable(name=name, **self._kwargs)
+            with namespace(self._namespace_string):
+                variable = Variable(name=self.name, **self._kwargs)
+                variable.name = '{}{}'.format(variable.name, indices)
+            self._vars[indices] = variable
         return self._vars[indices]
 
 

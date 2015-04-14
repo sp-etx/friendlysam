@@ -155,12 +155,10 @@ class Part(object):
 
 
     def variable(self, name=None, **kwargs):
-        name = '{}.{}'.format(self.name, name)
-        variable = opt.Variable(name=name, **kwargs)
-        return variable
+        with opt.namespace(self):
+            return opt.Variable(name=name, **kwargs)
 
 
     def variable_collection(self, name=None, **kwargs):
-        name = '{}.{}'.format(self.name, name)
-        collection = opt.VariableCollection(name=name, **kwargs)
-        return collection
+        with opt.namespace(self):
+            return opt.VariableCollection(name=name, **kwargs)
