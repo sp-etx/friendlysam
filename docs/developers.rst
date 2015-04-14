@@ -48,3 +48,10 @@ What it does (at the time of this writing) is this::
 	twine upload dist/*
 
 Twine will upload to PyPI and ask you for username and password.
+
+Updating the info on PyPI
+----------------------------
+
+To update the info shown on `PyPI <https://pypi.python.org/pypi/friendlysam>`_, change the info in ``setup.py``, ``DESCRIPTION.rst`` or whatever, and then run::
+
+	python setup.py register

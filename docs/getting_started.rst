@@ -29,8 +29,12 @@ It is highly recommended that you use a virtual environment. It's not strictly n
 Install Friendly Sam
 -----------------------------
 
-Assuming you have entered/activated your Python virtual environment, or wherever you want to install it, open a command prompt/shell and go to the place you downloaded (and unpacked) the source code. Stand in the directory containing ``setup.py`` and run the command::
+Assuming you have entered/activated your Python virtual environment, or wherever you want to install it, open a command prompt/shell and run the command::
 
-	python setup.py install
+	pip install friendlysam
 
-This will install Friendly Sam. You are now ready to boot up Python and do ``import friendlysam``.
+
+Make a simple model
+------------------------
+
+ ...
