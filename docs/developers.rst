@@ -28,7 +28,11 @@ The documentation for residues is made with `Sphinx <http://sphinx-doc.org/lates
 
 * If you want to make a very minor change to the documentation, you can actually just edit the source, push to the github repository and `magically <http://read-the-docs.readthedocs.org/en/latest/webhooks.html>`_, the docs will update at readthedocs.org.
 
-* However, if you want to edit the docs a lot, you probably want to make test builds on your own machine. In that case, you need to `learn about Sphinx <http://sphinx-doc.org>`_. The documentation is at least properly set up for a Windows environment in the repository, so you can just open a command prompt and go to ``friendlysam\docs`` and run the command ``make html``. The resulting HTML can be previewed under ``friendlysam\docs\_build\index.html``.
+* However, if you want to edit the docs a lot, you probably want to make test builds on your own machine. In that case, you need to `learn about Sphinx <http://sphinx-doc.org>`_. To build the docs, open a command prompt, go to ``friendlysam\docs`` and run the command::
+
+	``make html``
+
+The resulting HTML can be previewed under ``friendlysam\docs\_build\index.html``.
 
 Releasing Friendly Sam
 ---------------------------
