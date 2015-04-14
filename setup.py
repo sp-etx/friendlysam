@@ -12,7 +12,7 @@ with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
 
 setup(
     name='friendlysam',
-    version='0a',
+    version='0a0',
     packages=['friendlysam'],
     url='http://friendly-sam.readthedocs.org',
     license='LGPLv3',
