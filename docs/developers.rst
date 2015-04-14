@@ -30,7 +30,7 @@ The documentation for residues is made with `Sphinx <http://sphinx-doc.org/lates
 
 * However, if you want to edit the docs a lot, you probably want to make test builds on your own machine. In that case, you need to `learn about Sphinx <http://sphinx-doc.org>`_. To build the docs, open a command prompt, go to ``friendlysam\docs`` and run the command::
 
-	``make html``
+	make html
 
 The resulting HTML can be previewed under ``friendlysam\docs\_build\index.html``.
 
