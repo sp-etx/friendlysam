@@ -73,12 +73,15 @@ class ConstraintCollection(object):
             raise RuntimeError('constraint funcs must be callable but {} is not'.format(func))
         self._constraint_funcs.add(func)
 
-    def __iadd__(self, addition):
+    def add(self, addition):
         try:
             for func in addition:
                 self._add_constraint_func(func)
         except TypeError:
             self._add_constraint_func(addition)
+
+    def __iadd__(self, addition):
+        self.add(addition)
         return self
 
 
