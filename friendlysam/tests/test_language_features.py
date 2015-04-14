@@ -11,7 +11,7 @@ from nose.tools import raises, assert_raises
 
 from itertools import chain
 from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
-from friendlysam.optimization import Problem, Minimize, SolverError, Constraint, Variable
+from friendlysam.optimization import Problem, Minimize, SolverError, Constraint, Variable, VariableCollection, namespace
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, RESOURCE
 from friendlysam.compat import ignored
@@ -22,7 +22,8 @@ class Consumer(Node):
         super(Consumer, self).__init__(**kwargs)
         
         self._cons_func = consumption
-        self.activity = self.variable_collection('activity', lb=0)
+        with namespace(self):
+            self.activity = VariableCollection('activity', lb=0)
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
         if variant == 0:

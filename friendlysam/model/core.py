@@ -152,13 +152,3 @@ class Part(object):
     def add_parts(self, *parts):
         for p in parts:
             self.add_part(p)
-
-
-    def variable(self, name=None, **kwargs):
-        with opt.namespace(self):
-            return opt.Variable(name=name, **kwargs)
-
-
-    def variable_collection(self, name=None, **kwargs):
-        with opt.namespace(self):
-            return opt.VariableCollection(name=name, **kwargs)

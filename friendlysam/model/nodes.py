@@ -14,7 +14,7 @@ from itertools import chain
 
 import networkx as nx
 
-from friendlysam.optimization import Constraint
+from friendlysam.optimization import Constraint, VariableCollection, namespace
 from friendlysam.model import Part, InsanityError
 from friendlysam.compat import ignored
 
@@ -180,7 +180,8 @@ class Storage(Node):
         self.capacity = capacity
         self.maxchange = maxchange
 
-        self.volume = self.variable_collection('volume', lb=0., ub=capacity)
+        with namespace(self):
+            self.volume = VariableCollection('volume', lb=0., ub=capacity)
         self.accumulation[resource] = self._accumulation
 
         self.constraints += self._maxchange_constraints
@@ -234,7 +235,8 @@ class ResourceNetwork(Part):
             self.add_parts(n1, n2)
             self._graph.add_edge(n1, n2)
             name = 'flow ({} --> {})'.format(n1, n2)
-            flow = self.variable_collection(name, lb=0)
+            with namespace(self):
+                flow = VariableCollection(name, lb=0)
             self._flows[(n1, n2)] = flow
             n1.outflows.add(flow)
             n2.inflows.add(flow)
