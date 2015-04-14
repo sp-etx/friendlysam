@@ -10,9 +10,12 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+with open(path.join(here, 'version.txt'), encoding='utf-8') as f:
+    version = f.read()
+
 setup(
     name='friendlysam',
-    version='0a0',
+    version=version,
     packages=['friendlysam'],
     url='http://friendly-sam.readthedocs.org',
     license='LGPLv3',
