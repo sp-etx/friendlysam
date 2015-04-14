@@ -335,7 +335,7 @@ class Problem(object):
     def add_constraint(self, constraints):
         self._constraints.add(constraints)
 
-    def update_constraints(self, constraints):
+    def add_constraints(self, constraints):
         self._constraints.update(constraints)
 
     @property
