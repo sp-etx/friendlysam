@@ -9,6 +9,8 @@ from builtins import str
 from future import standard_library
 standard_library.install_aliases()
 
+from collections import defaultdict
+
 from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
@@ -83,16 +85,17 @@ class ConstraintCollection(object):
 class Part(object):
     """docstring for Part"""
 
-    _part_counter = 0
+    _subclass_counters = defaultdict(int)
 
     def __init__(self, name=None):
         self._constraints = ConstraintCollection(self)
         self._model = None
-        Part._part_counter += 1
+        self._subclass_counters[type(self)] += 1
         
         if name is None:
-            name = 'Part' + str(Part._part_counter)
+            name = '{}{:04d}'.format(type(self).__name__, self._subclass_counters[type(self)])
         self.name = name
+        logger.debug(self.name)
 
         self._parts = set()
 
