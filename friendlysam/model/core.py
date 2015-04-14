@@ -95,7 +95,6 @@ class Part(object):
         if name is None:
             name = '{}{:04d}'.format(type(self).__name__, self._subclass_counters[type(self)])
         self.name = name
-        logger.debug(self.name)
 
         self._parts = set()
 
@@ -106,7 +105,7 @@ class Part(object):
     @constraints.setter
     def constraints(self, value):
         if value is not self._constraints:
-            raise ValueError('you are not allowed to change this one')
+            raise AttributeError('you are not allowed to change this one')
 
 
     def __str__(self):
@@ -117,11 +116,10 @@ class Part(object):
         if len(matches) == 1:
             return matches[0]
         elif len(matches) == 0:
-            raise ValueError(
-                "'" + str(self) + "' has no part '" + name + "'")
+            raise KeyError("'{}' has no part '{}'".format(self, name))
         elif len(matches) > 1:
-            raise ValueError(
-                "'" + str(self) + "' has more than one part '" + name + "'")
+            raise KeyError(
+                "'{}' has more than one part '{}'".format(self, name))
 
 
     def parts(self, depth='inf'):
@@ -136,8 +134,9 @@ class Part(object):
 
     def add_part(self, p):
         if self in p.parts('inf'):
-            raise ValueError('cannot add ' + str(p) + ' to ' + str(self) +
-                ' because it would generate a cyclic relationship')
+            raise InsanityError(
+                ('cannot add {} to {} because it would '
+                'generate a cyclic relationship').format(p, self))
 
         self._parts.add(p)
 
