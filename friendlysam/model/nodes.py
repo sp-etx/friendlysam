@@ -102,43 +102,44 @@ def _get_aggr_func(owner, attr_name, resource):
 
     return aggregation
 
+
+class ClusterDict(object):
+    """docstring for ClusterDict"""
+    def __init__(self, owner, attr_name):
+        self._owner = owner
+        self._attr_name = attr_name
+        self._dict = {}
+
+    def __contains__(self, resource):
+        for part in self._owner.parts(depth=0):
+            if hasattr(part, self._attr_name) and resource in getattr(part, self._attr_name):
+                return True
+
+    def __getitem__(self, resource):
+        if not resource in self._dict:
+            self._dict[resource] = _get_aggr_func(self._owner, self._attr_name, resource)
+        return self._dict[resource]
+
+
+    def keys(self):
+        keys = set()
+        for part in self._owner.parts(depth=0):
+            with ignored(AttributeError):
+                keys.update(getattr(part, self._attr_name).keys())
+        return keys
+
+
 class Cluster(Node):
     """docstring for Cluster"""
     
-    class ClusterDict(object):
-        """docstring for ClusterDict"""
-        def __init__(self, owner, attr_name):
-            self._owner = owner
-            self._attr_name = attr_name
-            self._dict = {}
-
-        def __contains__(self, resource):
-            for part in self._owner.parts(depth=0):
-                if hasattr(part, self._attr_name) and resource in getattr(part, self._attr_name):
-                    return True
-
-        def __getitem__(self, resource):
-            if not resource in self._dict:
-                self._dict[resource] = _get_aggr_func(self._owner, self._attr_name, resource)
-            return self._dict[resource]
-
-
-        def keys(self):
-            keys = set()
-            for part in self._owner.parts(depth=0):
-                with ignored(AttributeError):
-                    keys.update(getattr(part, self._attr_name).keys())
-            return keys
-
-
     def __init__(self, *parts, **kwargs):
         self._resource = kwargs.pop('resource')
         super().__init__(**kwargs)
         self.add_parts(*parts)
 
-        self.consumption = Cluster.ClusterDict(self, 'consumption')
-        self.production = Cluster.ClusterDict(self, 'production')
-        self.accumulation = Cluster.ClusterDict(self, 'accumulation')
+        self.consumption = ClusterDict(self, 'consumption')
+        self.production = ClusterDict(self, 'production')
+        self.accumulation = ClusterDict(self, 'accumulation')
 
 
     @property
