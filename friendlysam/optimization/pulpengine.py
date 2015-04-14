@@ -56,7 +56,7 @@ class PulpSolver(object):
 
     def _get_unique_name(self, name=None):
         _counter = 0
-        while name is None or name in self._names:
+        while _counter == 0 or name in self._names:
             _counter += 1
             name = 'x{}'.format(_counter)
 
