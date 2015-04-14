@@ -4,3 +4,5 @@ friendlysam.egg-info
 bin
 *.pyc
 **/gurobi.log
+*.lp
+*.sol
