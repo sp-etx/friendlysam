@@ -4,9 +4,9 @@ Friendly Sam is a software toolbox for optimization-based modelling and simulati
 
 Friendly Sam is a toolbox developed to formulate and solve optimization-based models of energy systems, but it could be used for many other systems too. Friendly Sam is designed to produce readable and understandable model specifications. It is developed with the Python ecosystem of scientific tools in mind and can be used together with numpy, pandas, matplotlib and many of your other favorite tools.
 
-To install the latest release from PyPI, just do
+To install the latest release from PyPI, just do::
 
-``pip install friendlysam``
+	pip install friendlysam
 
 Or check out :doc:`getting_started` to install the latest version from GitHub.
 
