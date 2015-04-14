@@ -74,9 +74,7 @@ class PulpSolver(object):
         return LpVariable(name, **options)
 
     def solve(self, problem):
-        var_sources = chain((problem.objective,), problem.constraints)
-        friendlysam_vars = chain(*(x.variables for x in var_sources))
-        pulp_vars = {v: self._make_pulp_var(v) for v in friendlysam_vars if not hasattr(v, 'value')}
+        pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables if not hasattr(v, 'value')}
 
         if isinstance(problem.objective, Minimize):
             sense = LpMinimize

@@ -25,8 +25,8 @@ def test_simple_SOS1():
     weights = [1 for i in range(n)]
     weights[index] = 0.5
     prob = Problem()
-    prob.constraints.add(SOS1(vs))
-    prob.constraints.add(Constraint(sum(vs) == sum_val))
+    prob.add_constraint(SOS1(vs))
+    prob.add_constraint(Constraint(sum(vs) == sum_val))
     #prob.constraints.update(Constraint(v >= 0) for v in vs)
     prob.objective = Minimize(sum(v * w for v, w in zip(vs, weights)))
 
@@ -45,16 +45,15 @@ def test_simple_SOS1():
 def test_simple_pwa():
     pwa = PiecewiseAffine((1, 1.5, 2), name='aoeu')
     prob = Problem()
-    prob.constraints.update(pwa.constraints)
     prob.objective = Minimize(pwa.func([3, 2, 4]))
 
     solution = default_solver.solve(prob)
     print(solution)
-    for w in pwa.weights:
-        w.take_value(solution)
+    for var in pwa.variables:
+        var.take_value(solution)
 
     assert(approx(pwa.arg.value, 1.5))
 
 
 if __name__ == '__main__':
-    test_simple_SOS1()
+    test_simple_pwa()

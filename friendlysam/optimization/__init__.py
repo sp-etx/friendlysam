@@ -152,6 +152,7 @@ class Variable(_MathEnabled):
         self.lb = lb
         self.ub = ub
         self.domain = domain
+        self.constraints = set()
 
     def __str__(self):
         return self._name
@@ -283,29 +284,27 @@ class PiecewiseAffine(object):
     def __init__(self, points, name=None):
         self._name_base = name
         self._points = tuple(p for p in points)
-        self._weights = tuple(self._make_variable(p) for p in points)
+        self._variables = tuple(self._make_variable(p) for p in points)
         self._arg = self.func(self._points)
 
-        self._constraints = ((
-            SOS2(self._weights, desc='PiecewiseAffine weights'),
-            Constraint(sum(self._weights) == 1, desc='PiecewiseAffine sum of weights')) +
-            tuple(Constraint(w >= 0, 'Nonnegative weight in PiecewiseAffine')
-                  for w in self._weights))
+        constraints = ({
+            SOS2(self._variables, desc='PiecewiseAffine variables'),
+            Constraint(sum(self._variables) == 1, desc='PiecewiseAffine sum')} | 
+            {Constraint(w >= 0, 'Nonnegative weight in PiecewiseAffine')
+             for w in self._variables})
+
+        for variable in self._variables:
+            variable.constraints = constraints
 
 
     @property
-    def weights(self):
-        return self._weights
+    def variables(self):
+        return self._variables
 
 
     @property
     def points(self):
         return self._points
-
-
-    @property
-    def constraints(self):
-        return self._constraints
 
 
     @property
@@ -321,7 +320,7 @@ class PiecewiseAffine(object):
             domain=Domain.real)
 
     def func(self, values):
-        return sum(val * weight for val, weight in zip(values, self._weights))
+        return sum(val * variable for val, variable in zip(values, self._variables))
 
 
 class Problem(object):
@@ -331,12 +330,34 @@ class Problem(object):
         self._constraints = set() if constraints is None else constraints
         self.objective = objective
 
+    def add_constraint(self, constraints):
+        self._constraints.add(constraints)
+
+    def update_constraints(self, constraints):
+        self._constraints.update(constraints)
+
+    @property
+    def variables(self):
+        sources = set((self.objective,)) | self.constraints
+        return frozenset(chain(*(source.variables for source in sources)))
+
     @property
     def constraints(self):
-        return self._constraints
+        all_constraints = set()
 
-    def add_constraints(self, constraints):
-        self._constraints.update(constraints)
+        # Begin with the explicitly added constraints AND any constraints that come with
+        # the variables of the objective function.
+        new_constraints = set(self._constraints)
+        new_constraints.update(chain(*(v.constraints for v in self.objective.variables)))
+
+        # Then add constraints that come variables used in these constraints.
+        # Search through variables' constraints, etc, until no more are found.
+        while len(new_constraints) > 0:
+            all_constraints.update(new_constraints)
+            variables = chain(*(c.variables for c in new_constraints))
+            potentially_new_constraints = set(chain(*(v.constraints for v in variables)))
+            new_constraints = potentially_new_constraints - all_constraints
+        return frozenset(all_constraints)
 
     def solve(self):
         """Try to solve the optimization problem"""
