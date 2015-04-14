@@ -146,9 +146,11 @@ class Mul(_Expression, _MathEnabled):
 class Variable(_MathEnabled):
     """docstring for Variable"""
 
+    _counter = 0
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
         super().__init__()
-        self._name = '<unnamed>' if name is None else name
+        self._counter += 1
+        self._name = 'x{}'.format(self._counter) if name is None else name
         self.lb = lb
         self.ub = ub
         self.domain = domain
