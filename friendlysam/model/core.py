@@ -21,7 +21,7 @@ class InsanityError(Exception): pass
 
 class ConstraintCollection(object):
     """docstring for ConstraintCollection"""
-    def __init__(self, owner):
+    def __init__(self, owner=None):
         super().__init__()
         self._owner = owner
         self._constraint_funcs = set()
@@ -45,9 +45,7 @@ class ConstraintCollection(object):
         else:
             return '{}{}'.format(func_desc, indices)
 
-    def __call__(self, *indices, **kwargs):
-        depth = kwargs.get('depth', 'inf')
-
+    def __call__(self, *indices):
         constraints = set()
 
         for func in self._constraint_funcs:
@@ -60,11 +58,7 @@ class ConstraintCollection(object):
             func_desc = self._func_description(func, *indices)
             constraints.update(self._prepare(item, func_desc) for item in func_output)
 
-        # Subtract 1 from depth. This means we get only this part's constraints
-        # if depth=0, etc. It is probably the expected behavior.
-        depth = float(depth) - 1
-        subparts = self._owner.parts(depth=depth)
-        return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
+        return constraints
 
     def _add_constraint_func(self, func):
         if not callable(func):
