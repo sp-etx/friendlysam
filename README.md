@@ -1,11 +1,7 @@
 friendlysam
 ===========
 
-Friendly Sam is very much work in progress, and currently in a partial rewrite process.
-
-Friendly Sam 1.0 will be released in May 2015.
-
-Docs available at http://friendly-sam.readthedocs.org
+Documentation at http://friendly-sam.readthedocs.org
 
 TODO
 
