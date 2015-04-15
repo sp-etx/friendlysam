@@ -303,6 +303,13 @@ class Cluster(Node):
             part.unset_cluster(self)
 
 
+    def cost(self, t):
+        return 0
+
+    def state_variables(self, t):
+        return tuple()
+
+
 class Storage(Node):
     """docstring for Storage"""
     def __init__(self, resource, capacity=None, maxchange=None, **kwargs):
@@ -374,3 +381,9 @@ class FlowNetwork(Part):
 
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
+
+    def cost(self, t):
+        return 0
+
+    def state_variables(self, t):
+        return tuple()

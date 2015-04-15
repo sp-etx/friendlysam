@@ -339,8 +339,8 @@ class Problem(object):
         self._constraints = set() if constraints is None else constraints
         self.objective = objective
 
-    def add_constraint(self, constraints):
-        self._constraints.add(constraints)
+    def add_constraint(self, constraint):
+        self._constraints.add(constraint)
 
     def add_constraints(self, constraints):
         self._constraints.update(constraints)

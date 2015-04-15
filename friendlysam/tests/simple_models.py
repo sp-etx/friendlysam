@@ -32,3 +32,6 @@ class Consumer(fs.Node):
 
     def state_variables(self, t):
         return [self.activity(t)]
+
+    def cost(self, t):
+        return 0

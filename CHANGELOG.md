@@ -2,6 +2,7 @@
 
 ## [Unreleased][unreleased]
 ### Added
+- Added the MyopicDispatchModel.
 
 ### Changed
 - Renamed ResourceNetwork -> FlowNetwork.
