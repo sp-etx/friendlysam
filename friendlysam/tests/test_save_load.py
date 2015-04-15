@@ -6,7 +6,7 @@ from nose.tools import raises, assert_raises
 
 import dill
 from itertools import chain
-from friendlysam.model import Node, Storage, Cluster, ResourceNetwork, InsanityError
+from friendlysam.model import Node, Storage, Cluster, FlowNetwork, InsanityError
 from friendlysam.optimization import Problem, Minimize, SolverError
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE

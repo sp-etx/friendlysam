@@ -8,7 +8,7 @@ from optimization import OptimizationProblem
 from element import Element
 from storage import Storage
 from process import Process
-from resourcenetwork import ResourceNetwork
+from resourcenetwork import FlowNetwork
 
 class EnergySystem(Element):
     """docstring for EnergySystem"""
@@ -20,7 +20,7 @@ class EnergySystem(Element):
         all_decendants = self.all_decendants
         storages = [e for e in all_decendants if isinstance(e, Storage)]
         processes = [e for e in all_decendants if isinstance(e, Process)]
-        networks = [e for e in all_decendants if isinstance(e, ResourceNetwork)]
+        networks = [e for e in all_decendants if isinstance(e, FlowNetwork)]
 
         for s in storages:
             if not s.is_volume_fixed(t0):

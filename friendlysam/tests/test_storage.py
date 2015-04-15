@@ -4,7 +4,7 @@ from itertools import chain
 
 from nose.tools import raises
 
-from friendlysam.model import Storage, ResourceNetwork, InsanityError
+from friendlysam.model import Storage, FlowNetwork, InsanityError
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 from friendlysam.tests import default_solver, approx
 from friendlysam.optimization import Problem, Minimize
@@ -19,7 +19,7 @@ def test_basic_functionality():
     c = Consumer(consumption, name='Consumer')
     s = Storage(RESOURCE, capacity=15, name='Storage')
     s.volume(0).value = V0
-    rn = ResourceNetwork(RESOURCE)
+    rn = FlowNetwork(RESOURCE)
     rn.connect(p, s)
     rn.connect(s, c)
 

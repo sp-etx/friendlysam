@@ -199,8 +199,8 @@ class Storage(Node):
             RelConstraint(-maxchange <= acc, 'Max net outflow'))
 
 
-class ResourceNetwork(Part):
-    """docstring for ResourceNetwork"""
+class FlowNetwork(Part):
+    """docstring for FlowNetwork"""
     def __init__(self, resource, **kwargs):
         super().__init__(**kwargs)
         self.resource = resource

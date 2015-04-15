@@ -6,7 +6,7 @@ import h5py
 
 from essim import datautil
 import essim.core
-from essim.core import EnergySystem, Storage, Cluster, ResourceNetwork
+from essim.core import EnergySystem, Storage, Cluster, FlowNetwork
 from . import LinearCHP, LinearSlowCHP, Boiler, Consumer, HeatPump, Import, Resources
 
 
@@ -53,10 +53,10 @@ class Model(object):
         power_cluster.add_elements(*
             [e for e in elements if Resources.power in (e.inputs + e.outputs)])
 
-        heat_grid = ResourceNetwork(Resources.heat, name=u'Heat grid')
+        heat_grid = FlowNetwork(Resources.heat, name=u'Heat grid')
         heat_grid.add_node(heat_cluster)
 
-        power_grid = ResourceNetwork(Resources.power, name=u'Power grid')
+        power_grid = FlowNetwork(Resources.power, name=u'Power grid')
         power_grid.add_node(power_cluster)
 
         self.energy_system = EnergySystem()

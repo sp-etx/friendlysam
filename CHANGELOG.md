@@ -4,6 +4,7 @@
 ### Added
 
 ### Changed
+- Renamed ResourceNetwork -> FlowNetwork
 
 ### Fixed
 
