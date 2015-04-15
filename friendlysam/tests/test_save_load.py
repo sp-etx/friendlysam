@@ -6,8 +6,8 @@ from nose.tools import raises, assert_raises
 
 import dill
 from itertools import chain
-from friendlysam.model import Node, Storage, Cluster, FlowNetwork, InsanityError
-from friendlysam.optimization import Problem, Minimize, SolverError
+import friendlysam as fs
+
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 
@@ -16,10 +16,10 @@ from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 def run_model(p, c, cl, times):
     times = tuple(times)
 
-    prob = Problem()
+    prob = fs.Problem()
     prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
 
-    prob.objective = Minimize(sum(p.cost(t) for t in times))
+    prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 
@@ -38,7 +38,7 @@ def run_and_save():
 
     p = Producer(name='Producer')
     c = Consumer(consumption, name='Consumer')
-    cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
+    cl = fs.Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     run_model(p, c, cl, TIMES_1)
 

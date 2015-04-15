@@ -3,8 +3,9 @@
 from nose.tools import raises, assert_raises
 
 from itertools import chain
-from friendlysam.model import Node, Storage, Cluster, FlowNetwork, InsanityError
-from friendlysam.optimization import Problem, Minimize, SolverError
+import friendlysam as fs
+from friendlysam import Node, Cluster
+
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 
@@ -19,10 +20,10 @@ def test_cluster():
     c = Consumer(consumption, name='Consumer')
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
-    prob = Problem()
+    prob = fs.Problem()
     prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
 
-    prob.objective = Minimize(sum(p.cost(t) for t in times))
+    prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 
@@ -35,7 +36,7 @@ def test_cluster():
         assert approx(c.consumption[RESOURCE](t).value, consumption(t))
 
 
-@raises(InsanityError)
+@raises(fs.InsanityError)
 def test_cluster_insanity():
     n = Node()
     Cluster(n, resource=RESOURCE)
@@ -74,24 +75,24 @@ def test_cluster_add_remove():
     
     n.set_cluster(c)
     assert added()
-    assert_raises(InsanityError, n.set_cluster, c)
+    assert_raises(fs.InsanityError, n.set_cluster, c)
 
     n.unset_cluster(c)
     assert not_added()
-    assert_raises(InsanityError, n.unset_cluster, c)
+    assert_raises(fs.InsanityError, n.unset_cluster, c)
 
 
-@raises(SolverError)
+@raises(fs.SolverError)
 def test_balance_simple():
 
     time = 0
     consumption = lambda t: 1
     c = Consumer(consumption, name='Consumer')
 
-    prob = Problem()
+    prob = fs.Problem()
     prob.add_constraints(c.constraints(time))
 
-    prob.objective = Minimize(c.consumption[RESOURCE](time))
+    prob.objective = fs.Minimize(c.consumption[RESOURCE](time))
 
     # Raises SolverError because the consumer wants to consume but noone delivers
     solution = default_solver.solve(prob)

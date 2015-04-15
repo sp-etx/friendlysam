@@ -4,7 +4,9 @@ from itertools import chain
 
 from nose.tools import raises
 
-from friendlysam.model import Storage, FlowNetwork, InsanityError
+import friendlysam as fs
+from friendlysam import Storage, FlowNetwork
+
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 from friendlysam.tests import default_solver, approx
 from friendlysam.optimization import Problem, Minimize
@@ -41,7 +43,7 @@ def test_basic_functionality():
         assert approx(s.volume(t).value, s.volume(t-1).value + s.accumulation[RESOURCE](t-1).value)
 
 
-@raises(InsanityError)
+@raises(fs.InsanityError)
 def test_not_indexed_w_storage():
     s = Storage(RESOURCE)
     s.constraints()

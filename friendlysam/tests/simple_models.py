@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from friendlysam.model import Node
-from friendlysam.optimization import Constraint, namespace, VariableCollection
+import friendlysam as fs
+from friendlysam import Constraint, namespace, VariableCollection
 
 RESOURCE = 0
 
-class Producer(Node):
+class Producer(fs.Node):
     """docstring for Producer"""
     def __init__(self, **kwargs):
         super(Producer, self).__init__(**kwargs)
@@ -16,7 +16,7 @@ class Producer(Node):
         self.cost = lambda t: 3 * self.activity(t)
 
 
-class Consumer(Node):
+class Consumer(fs.Node):
     """docstring for Consumer"""
     def __init__(self, consumption, **kwargs):
         super(Consumer, self).__init__(**kwargs)

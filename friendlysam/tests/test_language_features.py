@@ -3,8 +3,9 @@
 from nose.tools import raises, assert_raises
 
 from itertools import chain
-from friendlysam.model import Node, Storage, Cluster, FlowNetwork, InsanityError
-from friendlysam.optimization import Problem, Minimize, SolverError, Constraint, Variable, VariableCollection, namespace
+import friendlysam as fs
+from friendlysam import Node, Cluster, Constraint, namespace
+
 from friendlysam.tests import default_solver, approx
 from friendlysam.tests.simple_models import Producer, RESOURCE
 from friendlysam.compat import ignored
@@ -16,7 +17,7 @@ class Consumer(Node):
         
         self._cons_func = consumption
         with namespace(self):
-            self.activity = VariableCollection('activity', lb=0)
+            self.activity = fs.VariableCollection('activity', lb=0)
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
         if variant == 0:
@@ -44,10 +45,10 @@ def check_variant(variant):
     c = Consumer(consumption, variant)
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
-    prob = Problem()
+    prob = fs.Problem()
     prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
 
-    prob.objective = Minimize(sum(p.cost(t) for t in times))
+    prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 
@@ -63,7 +64,7 @@ def check_variant(variant):
 @raises(RuntimeError)
 def non_callable_constraint():
     cl = Cluster(resource=RESOURCE)
-    cl.constraints += Variable() == 3
+    cl.constraints += fs.Variable() == 3
 
 def test_variants():
     for variant in range(5):
