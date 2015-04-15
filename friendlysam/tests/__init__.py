@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from friendlysam.optimization.pulpengine import PulpSolver
+from friendlysam.solvers.pulpengine import PulpSolver
 
 default_solver = PulpSolver()
 

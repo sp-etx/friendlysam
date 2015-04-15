@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# -*- coding: utf-8 -*-
+
 from friendlysam.log import get_logger
 logger = get_logger(__name__)
 
