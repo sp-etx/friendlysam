@@ -15,6 +15,9 @@ class Producer(fs.Node):
         self.production[RESOURCE] = lambda t: 2 * self.activity(t)
         self.cost = lambda t: 3 * self.activity(t)
 
+    def state_variables(self, t):
+        yield self.activity(t)
+
 
 class Consumer(fs.Node):
     """docstring for Consumer"""
@@ -26,3 +29,6 @@ class Consumer(fs.Node):
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
         self.constraints += lambda t: Constraint(cons(t) == consumption(t), 'Consumption constraint')
+
+    def state_variables(self, t):
+        return [self.activity(t)]
