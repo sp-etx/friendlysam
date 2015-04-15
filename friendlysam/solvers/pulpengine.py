@@ -9,8 +9,8 @@ from itertools import chain
 
 from pulp import *
 
-from friendlysam.optimization import (
-    Problem, Variable, Constraint, Relation, SOS1, SOS2, Maximize, Minimize, Domain, SolverError)
+import friendlysam as fs
+
 
 def _cbc_solve(problem):
     solver = PULP_CBC_CMD()
@@ -23,9 +23,9 @@ DEFAULT_OPTIONS = dict(
     ])
 
 _domain_mapping = {
-    Domain.real: LpContinuous,
-    Domain.integer: LpInteger,
-    Domain.binary: LpBinary,
+    fs.Domain.real: LpContinuous,
+    fs.Domain.integer: LpInteger,
+    fs.Domain.binary: LpBinary,
     None: None
 }
 
@@ -67,22 +67,22 @@ class PulpSolver(object):
     def solve(self, problem):
         pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables if not hasattr(v, 'value')}
 
-        if isinstance(problem.objective, Minimize):
+        if isinstance(problem.objective, fs.Minimize):
             sense = LpMinimize
-        elif isinstance(problem.objective, Maximize):
+        elif isinstance(problem.objective, fs.Maximize):
             sense = LpMaximize
         model = LpProblem('friendlysam', sense)
         
         model += problem.objective.expr.evaluate(replacements=pulp_vars)
 
         for i, c in enumerate(problem.constraints):
-            if isinstance(c, Constraint):
+            if isinstance(c, fs.Constraint):
                 model += c.expr.evaluate(replacements=pulp_vars)
                 
-            elif isinstance(c, (SOS1, SOS2)):
-                if isinstance(c, SOS1):
+            elif isinstance(c, (fs.SOS1, fs.SOS2)):
+                if isinstance(c, fs.SOS1):
                     sosdict = model.sos1
-                elif isinstance(c, SOS2):
+                elif isinstance(c, fs.SOS2):
                     sosdict = model.sos2
                 else:
                     raise NotImplementedError()
@@ -105,7 +105,7 @@ class PulpSolver(object):
             raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
         
         if not status == LpStatusOptimal:
-            raise SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))
+            raise fs.SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))
 
         for e in exceptions:
             print(e)

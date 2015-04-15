@@ -8,7 +8,7 @@ from itertools import chain
 
 import networkx as nx
 
-import friendlysam.optimization as opt
+import friendlysam as fs
 from friendlysam.optimization import Constraint, VariableCollection, namespace
 from friendlysam.compat import ignored
 
@@ -24,10 +24,10 @@ class ConstraintCollection(object):
         self._constraint_funcs = set()
 
     def _prepare(self, constraint, origin_desc):
-        if isinstance(constraint, opt.Relation):
-            constraint = opt.Constraint(constraint)
+        if isinstance(constraint, fs.Relation):
+            constraint = Constraint(constraint)
 
-        if not isinstance(constraint, opt.Constraint):
+        if not isinstance(constraint, Constraint):
             raise ValueError('cannot handle constraint {}'.format(constraint))
 
         if constraint.origin is None:
