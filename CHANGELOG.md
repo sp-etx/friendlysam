@@ -6,6 +6,7 @@
 ### Changed
 - Renamed ResourceNetwork -> FlowNetwork
 - Simplified package structure significantly
+- Simplified logging
 
 
 ### Fixed

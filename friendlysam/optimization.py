@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# -*- coding: utf-8 -*-
-
-from friendlysam.log import get_logger
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 from contextlib import contextmanager
 from itertools import chain

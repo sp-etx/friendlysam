@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from friendlysam.log import get_logger
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 import operator
 import collections
