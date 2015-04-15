@@ -2,7 +2,7 @@
 
 import os
 from os import path
-from setuptools import setup
+from setuptools import setup, find_packages
 
 here = path.abspath(path.dirname(__file__))
 
@@ -16,7 +16,7 @@ with open(path.join(here, 'version.txt'), encoding='utf-8') as f:
 setup(
     name='friendlysam',
     version=version,
-    packages=['friendlysam'],
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     url='http://friendly-sam.readthedocs.org',
     license='LGPLv3',
     author='Rasmus Einarsson',

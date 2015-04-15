@@ -1,5 +1,5 @@
 rmdir /S /Q dist
 rmdir /S /Q build
 rmdir /S /Q friendlysam.egg-info
-python setup.py bdist_wheel
+python setup.py sdist bdist_wininst
 twine upload dist/*
