@@ -24,5 +24,3 @@ def test_state_vars():
     m.solver = default_solver
     m.advance()
     m.advance()
-
-test_state_vars()
