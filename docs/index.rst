@@ -32,7 +32,6 @@ Contents:
    :maxdepth: 2
 
    install
-   tutorial
    developers
    why-another-tool
    user-guide

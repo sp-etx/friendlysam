@@ -27,10 +27,10 @@ Second, it is not fool proof. It is entirely possible to make models that are st
 Third, Friendly Sam is not primarily optimized for speed. If you want to solve a really big model fast, you are probably better off with something like AMPL or GAMS, or even writing your own code. However, if your model is moderately big you might get the job done faster with Friendly Sam because debugging, data handling, analysis and visualization will be so much faster. In our experience, the development phase often consumes more time and money than the computation phase, so development convenience is often more important than execution speed.
 
 
-Optimization: Variables, constraints, problems, and solvers
----------------------------------------------------------------
+Variables and expressions
+----------------------------
 
-Variables are central to any optimization problem. With Friendly Sam, each variable is an instance of the ``Variable`` class. Variables can be added, multiplied, subtracted, and so on, to form expressions, including equalities and inequalities.
+In Friendly Sam, each variable is an instance of the ``Variable`` class. Variables can be added, multiplied, subtracted, and so on, to form expressions, including equalities and inequalities.
 
 ::
 
@@ -44,3 +44,42 @@ Variables are central to any optimization problem. With Friendly Sam, each varia
 	<Mul at 0x...: (x + 1) * 2>
 	>>> my_var * 2 <= 3
 	<LessEqual at 0x...: x * 2 <= 3>
+
+In this case, we named the ``Variable`` object ``x``. This is nothing more than a string attached to the object, and it does not say anything about the identity of the variable. In principle you can have several ``Variable`` objects with the same name, but that's really confusing and should not be necessary.
+
+::
+
+	>>> my_var = fs.Variable('y')
+	>>> my_other_var = fs.Variable('y')
+	>>> my_var is my_other_var
+	False
+	>>> my_var + my_other_var
+	<Add at 0x...: y + y>
+
+It is often a good idea to give your variables names you can recognize, because that simplifies debugging when you want to inspect the expressions you have made with the variables. But if you don't want to name variables you don't have to. The variables are then named automatically.
+
+::
+
+	>>> fs.Variable('x')
+	<Variable at 0x...: x>
+	>>> fs.Variable('y')
+	<Variable at 0x...: y>
+
+There is also a convenient class called ``VariableCollection``. It is a sort of lazy dictionary, which creates variables when you ask for them::
+
+	>>> x = fs.VariableCollection('x')
+	>>> x
+	<VariableCollection at 0x...: x>
+	>>> x(1)
+	<Variable at 0x...: x(1)>
+	>>> x(1, 'a')
+	<Variable at 0x...: x(1, 'a')>
+
+You can think of ``VariableCollection`` as an indexed variable, but all it does is just to create variables when you call it, and then remember them. You can send one or more indices. Every index must be hashable. For example, tuples work, but not lists::
+	
+	>>> x((3, 1, 4))
+	<Variable at 0x...: x((3, 1, 4))>
+	>>> x([3, 1, 4])
+	Traceback (most recent call last):
+	...
+	TypeError: unhashable type: 'list'
