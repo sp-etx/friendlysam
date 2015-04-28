@@ -264,18 +264,35 @@ class VariableCollection(object):
     """docstring for VariableCollection"""
     def __init__(self, name=None, **kwargs):
         super().__init__()
-        self._namespace_string = _namespace_string
-        self.name = name
+        self.name = 'X{}'.format(self._next_counter()) if name is None else name
+        self.name = rename_namespace(self.name)
         self._kwargs = kwargs
         self._vars = {}
 
+    _counter = 0
+
+    def _next_counter(self):
+        VariableCollection._counter += 1
+        return VariableCollection._counter
+
     def __call__(self, *indices):
         if not indices in self._vars:
-            with namespace(self._namespace_string):
+            with namespace(''):
                 variable = Variable(name=self.name, **self._kwargs)
-                variable.name = '{}{}'.format(variable.name, indices)
+                if len(indices) == 1:
+                    variable.name = '{}({})'.format(variable.name, indices[0])
+                else:
+                    variable.name = '{}{}'.format(variable.name, indices)
             self._vars[indices] = variable
         return self._vars[indices]
+
+
+    def __str__(self):
+        return self.name
+
+
+    def __repr__(self):
+        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
 
 
 class ConstraintError(Exception): pass
