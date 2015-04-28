@@ -60,10 +60,10 @@ It is often a good idea to give your variables names you can recognize, because 
 
 ::
 
-	>>> fs.Variable('x')
-	<Variable at 0x...: x>
-	>>> fs.Variable('y')
-	<Variable at 0x...: y>
+	>>> fs.Variable()
+	<Variable at 0x...: x1>
+	>>> fs.Variable()
+	<Variable at 0x...: x2>
 
 There is also a convenient class called ``VariableCollection``. It is a sort of lazy dictionary, which creates variables when you ask for them::
 

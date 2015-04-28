@@ -277,12 +277,12 @@ class VariableCollection(object):
 
     def __call__(self, *indices):
         if not indices in self._vars:
+            if len(indices) == 1:
+                name = '{}({})'.format(self.name, indices[0])
+            else:
+                name = '{}{}'.format(self.name, indices)
             with namespace(''):
-                variable = Variable(name=self.name, **self._kwargs)
-                if len(indices) == 1:
-                    variable.name = '{}({})'.format(variable.name, indices[0])
-                else:
-                    variable.name = '{}{}'.format(variable.name, indices)
+                variable = Variable(name=name, **self._kwargs)
             self._vars[indices] = variable
         return self._vars[indices]
 
