@@ -219,10 +219,15 @@ class Variable(_MathEnabled):
     """docstring for Variable"""
 
     _counter = 0
+
+    def _next_counter(self):
+        Variable._counter += 1
+        return Variable._counter
+
+
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
         super().__init__()
-        Variable._counter += 1
-        self.name = 'x{}'.format(self._counter) if name is None else name
+        self.name = 'x{}'.format(self._next_counter()) if name is None else name
         self.name = rename_namespace(self.name)
         self.lb = lb
         self.ub = ub
