@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 from contextlib import contextmanager
 from itertools import chain
 from enum import Enum
+import numbers
 
 from friendlysam.compat import ignored
 
@@ -13,6 +14,8 @@ _namespace_string = ''
 
 def rename_namespace(s):
     global _namespace_string
+    if _namespace_string == '':
+        return str(s)
     return '{}.{}'.format(_namespace_string, s)
 
 @contextmanager
@@ -38,11 +41,12 @@ DEFAULT_DOMAIN = Domain.real
 def _evaluate_or_not(obj, replacements):
     return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
 
-class _Expression(object):
-    """docstring for _Expression"""
+class _Operation(object):
+    """docstring for _Operation"""
     def __init__(self, *args):
         super().__init__()
         self._args = tuple(args)
+
 
     def evaluate(self, replacements):
         return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
@@ -61,30 +65,47 @@ class _Expression(object):
                 leaves.add(a)
         return leaves
 
-    def __str__(self):
-        return self._format.format(*self._args)
+    def _format_arg(self, arg):
+        if isinstance(arg, (numbers.Number, Variable)):
+            return str(arg)
 
-class Relation(_Expression):
+        if isinstance(arg, _Operation) and arg._priority >= self._priority:
+            return str(arg)
+        
+        return '({})'.format(arg)
+
+    def __str__(self):
+        return self._format.format(*(self._format_arg(a) for a in self._args))
+
+    def __repr__(self):
+        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+
+class Relation(_Operation):
+
+    _priority = 0
+
+    def __bool__(self):
+        raise RuntimeError("{} is a Relation and its truthyness should not be tested".format(self))
+
 
     @property
     def expr(self):
         return self
 
-
 class LessEqual(Relation):
-    _format = '({} <= {})'
+    _format = '{} <= {}'
 
     def _evaluate(self, a, b):
         return a <= b
 
 class GreaterEqual(Relation):
-    _format = '({} >= {})'
+    _format = '{} >= {}'
 
     def _evaluate(self, a, b):
         return a >= b
 
 class Equals(Relation):
-    _format = '({} == {})'
+    _format = '{} == {}'
 
     def _evaluate(self, a, b):
         return a == b
@@ -126,26 +147,69 @@ class _MathEnabled(object):
         return id(self)
 
 
-class Add(_Expression, _MathEnabled):
+class Add(_Operation, _MathEnabled):
     """docstring for Add"""
-    _format = '({} + {})'
+    _format = '{} + {}'
+    _priority = 1
+
+    def __new__(cls, a, b):
+        if isinstance(a, numbers.Number) and a == 0:
+            return b
+        if isinstance(b, numbers.Number) and b == 0:
+            return a
+
+        super_new = super().__new__
+        if super_new is object.__new__:
+            return super_new(cls)
+        return super_new(cls, a, b)
 
     def _evaluate(self, a, b):
         return a + b
 
 
-class Sub(_Expression, _MathEnabled):
+class Sub(_Operation, _MathEnabled):
     """docstring for Sub"""
-    _format = '({} - {})'
+    _format = '{} - {}'
+    _priority = 1
+
+    def __new__(cls, a, b):
+        if isinstance(a, numbers.Number) and a == 0:
+            return -b
+        if isinstance(b, numbers.Number) and b == 0:
+            return a
+
+        super_new = super().__new__
+        if super_new is object.__new__:
+            return super_new(cls)
+        return super_new(cls, a, b)
 
     def _evaluate(self, a, b):
         return a - b
         
     
-class Mul(_Expression, _MathEnabled):
+class Mul(_Operation, _MathEnabled):
     """docstring for Mul"""
     
-    _format = '({} * {})'
+    _format = '{} * {}'
+    _priority = 2
+
+    def __new__(cls, a, b):
+        if isinstance(a, numbers.Number):
+            if a == 0:
+                return 0
+            elif a == 1:
+                return b
+
+        if isinstance(b, numbers.Number):
+            if b == 0:
+                return 0
+            elif b == 1:
+                return a
+
+        super_new = super().__new__
+        if super_new is object.__new__:
+            return super_new(cls)
+        return super_new(cls, a, b)
 
     def _evaluate(self, a, b):
         return a * b
@@ -157,7 +221,7 @@ class Variable(_MathEnabled):
     _counter = 0
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
         super().__init__()
-        self._counter += 1
+        Variable._counter += 1
         self.name = 'x{}'.format(self._counter) if name is None else name
         self.name = rename_namespace(self.name)
         self.lb = lb
@@ -165,8 +229,6 @@ class Variable(_MathEnabled):
         self.domain = domain
         self.constraints = set()
 
-    def __str__(self):
-        return self.name
 
     @property
     def leaves(self):
@@ -183,6 +245,14 @@ class Variable(_MathEnabled):
 
     def take_value(self, solution):
         self.value = solution[self]
+
+
+    def __str__(self):
+        return self.name
+
+
+    def __repr__(self):
+        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
 
 
 class VariableCollection(object):
