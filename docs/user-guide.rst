@@ -45,7 +45,7 @@ In Friendly Sam, each variable is an instance of the ``Variable`` class. Variabl
 	>>> my_var * 2 <= 3
 	<LessEqual at 0x...: x * 2 <= 3>
 
-In this case, we named the ``Variable`` object ``x``. This is nothing more than a string attached to the object, and it does not say anything about the identity of the variable. In principle you can have several ``Variable`` objects with the same name, but that's really confusing and should not be necessary.
+In this case, we named the ``Variable`` object ``'x'``. This is nothing more than a string attached to the object, and it does not say anything about the identity of the variable. In principle you can have several ``Variable`` objects with the same name, but that's really confusing and should not be necessary.
 
 ::
 
