@@ -1,5 +1,5 @@
-Getting started
-=====================
+How to install Friendly Sam
+=============================
 
 
 Get Python 3

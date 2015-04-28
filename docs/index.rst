@@ -8,9 +8,7 @@ To install the latest release from PyPI, just do::
 
 	pip install friendlysam
 
-Check out :doc:`getting_started` for more detailed instructions.
-
-If you want to be sure to get the latest version, you probably want to follow the instructions here: :doc:`developers`.
+Check out :doc:`install` for more detailed instructions. If you want to be sure to get the latest version, see the :doc:`developer section <developers>`.
 
 Friendly Sam is friendly in a number of ways:
 ----------------------------------------------
@@ -33,9 +31,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   getting_started
+   install
+   tutorial
    developers
-
+   why-another-tool
+   user-guide
 
 
 Indices and tables
