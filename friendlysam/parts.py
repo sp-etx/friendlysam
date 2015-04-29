@@ -385,5 +385,5 @@ class FlowNetwork(Part):
     def cost(self, t):
         return 0
 
-    def state_variables(self, t):
-        return tuple()
+    def state_variables(self, *indices):
+        return tuple(var(*indices) for var in self._flows)
