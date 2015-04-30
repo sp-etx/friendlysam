@@ -14,8 +14,9 @@ In Friendly Sam, each variable is an instance of the ``Variable`` class. Variabl
 
 ::
 
-	>>> import friendlysam as fs
-	>>> my_var = fs.Variable('x')
+	>>> import friendlysam
+	>>> from friendlysam import Variable
+	>>> my_var = Variable('x')
 	>>> my_var
 	<Variable at 0x...: x>
 	>>> my_var * 2 + 1
@@ -29,8 +30,8 @@ In this case, we named the ``Variable`` object ``'x'``. This is nothing more tha
 
 ::
 
-	>>> my_var = fs.Variable('y')
-	>>> my_other_var = fs.Variable('y')
+	>>> my_var = Variable('y')
+	>>> my_other_var = Variable('y')
 	>>> my_var is my_other_var
 	False
 	>>> my_var + my_other_var
@@ -40,14 +41,15 @@ It is often a good idea to give your variables names you can recognize, because 
 
 ::
 
-	>>> fs.Variable()
+	>>> Variable()
 	<Variable at 0x...: x1>
-	>>> fs.Variable()
+	>>> Variable()
 	<Variable at 0x...: x2>
 
 There is also a convenient class called ``VariableCollection``. It is a sort of lazy dictionary, which creates variables when you ask for them::
 
-	>>> z = fs.VariableCollection('z')
+	>>> from friendlysam import VariableCollection
+	>>> z = VariableCollection('z')
 	>>> z
 	<VariableCollection at 0x...: z>
 	>>> z(1)
@@ -68,3 +70,52 @@ Every index must be hashable. For example, tuples are valid indices, but not lis
 	Traceback (most recent call last):
 	...
 	TypeError: unhashable type: 'list'
+
+
+Variables can be named in a namespace, like this::
+
+	>>> from friendlysam import namespace
+	>>> with namespace('cheese'):
+	...     cheese1 = Variable('gorgonzola')
+	...     cheese2 = VariableCollection('ricotta')
+	... 
+	>>> cheese1
+	<Variable at 0x...: cheese.gorgonzola>
+	>>> cheese2
+	<VariableCollection at 0x...: cheese.ricotta>
+
+The namespace doesn't affect the function of a variable in any way. It only prepends a string representation of whatever object to the variable name, so you can also do things like this::
+
+	>>> with namespace(dict()):
+	...     Variable('x')
+	... 
+	<Variable at 0x...: {}.x>
+
+
+Optimization problems
+-----------------------
+
+We use Friendly Sam to formulate MILP problems. The optimization library could be extended to allow other types of problems, too, but this is what is supported today.
+
+Now, let's begin with a full example of an optimization problem.
+
+	>>> from friendlysam import Problem, Maximize
+	>>> 
+	>>> # Create the problem
+	>>> x = VariableCollection()
+	>>> prob = Problem()
+	>>> prob.objective = Maximize(x(1) + x(2))
+	>>> prob.add(8 * x(1) + 4 * x(2) <= 5)
+	>>> prob.add(2 * x(1) + 4 * x(2) <= 11)
+	>>> 
+	>>> # Get a solver and solve the problem
+	>>> solver = friendlysam.get_solver()
+	>>> solution = solver.solve(prob)
+	>>> type(solution)
+	<class 'dict'>
+	>>> solution[x(1)]
+	1.0
+	>>> solution[x(2)]
+	0.75
+
+The solver does not in any way affect the problem or the variables. It just reads the problem, solves it and handles back a ``dict`` with your `Variable` objects as keys and their solutions as values.
