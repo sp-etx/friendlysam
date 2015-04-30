@@ -7,6 +7,7 @@ Get Python 3
 
 Friendly Sam is developed in Python 3 (at the time of this writing, Python 3.4). Download and install it now, if you haven't already.
 
+.. _virtual-environment:
 
 Use a virtual environment
 ------------------------------

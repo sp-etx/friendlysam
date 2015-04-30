@@ -1,24 +1,28 @@
 For developers
 ===========================
 
-Download the source code
------------------------------
-
-* **Alternative 1:** Download a zip file: https://github.com/sp-etx/friendlysam/archive/master.zip
-
-* **Alternative 2:** If you know git, clone into the repository::
-
-		git clone https://github.com/sp-etx/friendlysam.git
-
-
 Install in developer mode
 ----------------------------
 
 If you are developing the source code of Friendly Sam, you probably want to install it in "develop" mode instead. This has two benefits. First, you get some extra dependencies such as ``nose`` (testing package), ``sphinx`` (documentation package) and ``twine`` and ``wheel`` (used for releasing), etc. Second, you won't have to reinstall the package into your Python site-packages directory every time you change something.
 
-To install Friendly Sam in develop mode, skip the previous step and instead do this::
+1. Get Python 3. (Note: If you are on Windows it might be convenient to use a ready-made distribution like `WinPython <https://winpython.github.io/>`_ and skip step 5 below, but we can't guarantee it will work.)
 
-	pip install -r develop.txt
+2. Download the source code
+
+	* **Alternative 1:** Download a zip file: https://github.com/sp-etx/friendlysam/archive/master.zip
+
+	* **Alternative 2:** If you know git, clone into the repository::
+
+			git clone https://github.com/sp-etx/friendlysam.git
+
+3. You probably want to install Friendly Sam in a :ref:`virtual environment <virtual-environment>`. Create one and activate it before you take the next step.
+
+4. Now, to install Friendly Sam in develop mode, do this::
+
+		pip install -r develop.txt
+
+5. If you are on Windows, `pip`-installation of some packages will fail if you don't have a compiler correctly configured. One such example is NumPy. A simple way around it is to install binaries from `Christoph Gohlke's website <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_ for the packages that throw errors when you do ``pip install -r develop.txt``.
 
 
 Make Sphinx documentation
