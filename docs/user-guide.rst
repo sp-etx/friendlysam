@@ -3,6 +3,11 @@
 User Guide
 ====================================================================================
 
+.. note::
+
+	This user guide is work in progress. Friendly Sam 1.0 will be released in June 2015. Please post any questions or issues on the `Issue Tracker <https://github.com/sp-etx/friendlysam/issues>`_.
+
+
 You might want to read :ref:`what-friendly-sam-is-for` first.
 
 Now let's get started!
