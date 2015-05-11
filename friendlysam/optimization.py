@@ -117,26 +117,30 @@ class Equals(Relation):
     def _evaluate(self, a, b):
         return a == b
 
+def _is_zero(something):
+    return isinstance(something, numbers.Number) and something == 0
+
+
 class _MathEnabled(object):
     """docstring for _MathEnabled"""
 
     def __add__(self, other):
-        return Add(self, other)
+        return self if _is_zero(other) else Add(self, other)
 
     def __radd__(self, other):
-        return Add(other, self)
+        return self if _is_zero(other) else Add(other, self)
 
     def __sub__(self, other):
-        return Sub(self, other)
+        return self if _is_zero(other) else Sub(self, other)
 
     def __rsub__(self, other):
-        return Sub(other, self)
+        return -self if _is_zero(other) else Sub(other, self)
 
     def __mul__(self, other):
-        return Mul(self, other)
+        return 0 if _is_zero(other) else Mul(self, other)
 
     def __rmul__(self, other):
-        return Mul(other, self)
+        return 0 if _is_zero(other) else Mul(other, self)
 
     def __neg__(self):
         return -1 * self
@@ -159,17 +163,6 @@ class Add(_Operation, _MathEnabled):
     _format = '{} + {}'
     _priority = 1
 
-    def __new__(cls, a, b):
-        if isinstance(a, numbers.Number) and a == 0:
-            return b
-        if isinstance(b, numbers.Number) and b == 0:
-            return a
-
-        super_new = super().__new__
-        if super_new is object.__new__:
-            return super_new(cls)
-        return super_new(cls, a, b)
-
     def _evaluate(self, a, b):
         return a + b
 
@@ -178,17 +171,6 @@ class Sub(_Operation, _MathEnabled):
     """docstring for Sub"""
     _format = '{} - {}'
     _priority = 1
-
-    def __new__(cls, a, b):
-        if isinstance(a, numbers.Number) and a == 0:
-            return -b
-        if isinstance(b, numbers.Number) and b == 0:
-            return a
-
-        super_new = super().__new__
-        if super_new is object.__new__:
-            return super_new(cls)
-        return super_new(cls, a, b)
 
     def _evaluate(self, a, b):
         return a - b
