@@ -27,6 +27,13 @@ def namespace(name):
     _namespace_string = old
 
 
+def get_solver(**kwargs):
+    engine = kwargs.pop('engine', 'pulp')
+
+    if engine == 'pulp':            
+        from friendlysam.solvers.pulpengine import PulpSolver
+        return PulpSolver(**kwargs)
+
 class SolverError(Exception): pass
         
 

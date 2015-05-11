@@ -17,7 +17,7 @@ def _cbc_solve(problem):
     return solver.solve_CBC(problem, use_mps=False)
 
 DEFAULT_OPTIONS = dict(
-    solver_order=[
+    solver_funcs=[
         GUROBI_CMD(msg=0).solve,
         _cbc_solve
     ])
@@ -40,9 +40,10 @@ _pulp_statuses = {
 class PulpSolver(object):
     """docstring for PulpSolver"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.options = DEFAULT_OPTIONS
+        self.options = DEFAULT_OPTIONS.copy()
+        self.options.update(kwargs)
         self._names = set()
 
     def _get_unique_name(self, name=None):
@@ -95,7 +96,7 @@ class PulpSolver(object):
                 raise NotImplementedError('Cannot handle constraint {}'.format(c))
 
         exceptions = []
-        for solver_func in self.options['solver_order']:
+        for solver_func in self.options['solver_funcs']:
             try:
                 status = solver_func(model)
                 break
@@ -106,8 +107,5 @@ class PulpSolver(object):
         
         if not status == LpStatusOptimal:
             raise fs.SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))
-
-        for e in exceptions:
-            print(e)
 
         return {v: pv.value() for v, pv in pulp_vars.items()}
