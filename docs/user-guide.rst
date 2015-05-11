@@ -110,8 +110,8 @@ Now, let's begin with a full example of an optimization problem.
 	>>> x = VariableCollection()
 	>>> prob = Problem()
 	>>> prob.objective = Maximize(x(1) + x(2))
-	>>> prob.add(8 * x(1) + 4 * x(2) <= 5)
-	>>> prob.add(2 * x(1) + 4 * x(2) <= 11)
+	>>> prob.add(8 * x(1) + 4 * x(2) <= 11)
+	>>> prob.add(2 * x(1) + 4 * x(2) <= 5)
 	>>> 
 	>>> # Get a solver and solve the problem
 	>>> solver = friendlysam.get_solver()
