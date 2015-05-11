@@ -17,7 +17,7 @@ def run_model(p, c, cl, times):
     times = tuple(times)
 
     prob = fs.Problem()
-    prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(cl.constraints(t) for t in times)))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 

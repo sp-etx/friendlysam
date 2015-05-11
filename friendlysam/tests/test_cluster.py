@@ -21,7 +21,7 @@ def test_cluster():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob.add_constraints(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(cl.constraints(t) for t in times)))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
@@ -90,7 +90,7 @@ def test_balance_simple():
     c = Consumer(consumption, name='Consumer')
 
     prob = fs.Problem()
-    prob.add_constraints(c.constraints(time))
+    prob.add(c.constraints(time))
 
     prob.objective = fs.Minimize(c.consumption[RESOURCE](time))
 

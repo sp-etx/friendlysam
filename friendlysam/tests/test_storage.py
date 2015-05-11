@@ -26,7 +26,7 @@ def test_basic_functionality():
     rn.connect(s, c)
 
     prob = Problem()
-    prob.add_constraints(chain(*(rn.constraints(t) for t in times)))
+    prob.add(chain(*(rn.constraints(t) for t in times)))
 
     prob.objective = Minimize(sum(p.cost(t) for t in times))
 

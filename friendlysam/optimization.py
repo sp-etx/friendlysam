@@ -431,11 +431,22 @@ class Problem(object):
         self._constraints = set() if constraints is None else constraints
         self.objective = objective
 
-    def add_constraint(self, constraint):
+    def _add_constraint(self, constraint):
+        if isinstance(constraint, Relation):
+            constraint = Constraint(constraint, 'Ad hoc constraint')
+        if not isinstance(constraint, (Constraint, _SOS)):
+            raise ValueError('{} is not a valid constraint'.format(constraint))
         self._constraints.add(constraint)
 
-    def add_constraints(self, constraints):
-        self._constraints.update(constraints)
+    def add(self, constraints):
+        try:
+            constraints = iter(constraints)
+        except TypeError: # not iterable
+            constraints = (constraints,)
+    
+        for c in constraints:
+            self._add_constraint(c)
+    
 
     @property
     def variables(self):

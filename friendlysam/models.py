@@ -32,7 +32,7 @@ class MyopicDispatchModel(fs.Part):
 
         problem = fs.Problem()
         problem.objective = fs.Minimize(sum(p.cost(t) for p, t in product(parts, opt_times)))
-        problem.add_constraints(chain(*(p.constraints(t) for p, t in product(parts, opt_times))))
+        problem.add(chain(*(p.constraints(t) for p, t in product(parts, opt_times))))
 
         solution = self.solver.solve(problem)
 
