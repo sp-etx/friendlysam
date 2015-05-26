@@ -5,7 +5,7 @@ How to install Friendly Sam
 Get Python 3
 ----------------
 
-Friendly Sam is developed in Python 3 (at the time of this writing, Python 3.4). Download and install it now, if you haven't already.
+Friendly Sam is developed in `Python 3 <https://www.python.org/downloads/>`_ (at the time of this writing, Python 3.4). Download and install it now, if you haven't already.
 
 .. _virtual-environment:
 
@@ -24,7 +24,7 @@ It is highly recommended that you use a virtual environment. It's not strictly n
 
 * **If you are on Linux**
 
-	Basically, you follow the instructions for Windows above, but exchange ``cmd`` for ``bash`` and ``C:\Python34\python.exe`` for something more suitable. Also see the docs for `vex <https://pypi.python.org/pypi/vex>`_ if you have problems.
+	Basically, you follow the instructions for Windows above but exchange ``C:\Python34\python.exe`` for something more suitable, and then do ``vex my_project_name bash`` instead. Also see the docs for `vex <https://pypi.python.org/pypi/vex>`_ if you have problems.
 
 
 Install Friendly Sam
@@ -33,9 +33,3 @@ Install Friendly Sam
 Assuming you have entered/activated your Python virtual environment, or wherever you want to install it, open a command prompt/shell and run the command::
 
 	pip install friendlysam
-
-
-Make a simple model
-------------------------
-
- ...

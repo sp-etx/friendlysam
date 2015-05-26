@@ -6,7 +6,7 @@ Install in developer mode
 
 If you are developing the source code of Friendly Sam, you probably want to install it in "develop" mode instead. This has two benefits. First, you get some extra dependencies such as ``nose`` (testing package), ``sphinx`` (documentation package) and ``twine`` and ``wheel`` (used for releasing), etc. Second, you won't have to reinstall the package into your Python site-packages directory every time you change something.
 
-1. Get Python 3. (Note: If you are on Windows it might be convenient to use a ready-made distribution like `WinPython <https://winpython.github.io/>`_ and skip step 5 below, but we can't guarantee it will work.)
+1. Get `Python 3 <https://www.python.org/downloads/>`_. (Note: If you are on Windows it might be convenient to use a ready-made distribution like `WinPython <https://winpython.github.io/>`_ and skip step 5 below, but we can't guarantee it will work.)
 
 2. Download the source code
 
@@ -22,7 +22,7 @@ If you are developing the source code of Friendly Sam, you probably want to inst
 
 		pip install -r develop.txt
 
-5. If you are on Windows, `pip`-installation of some packages will fail if you don't have a compiler correctly configured. One such example is NumPy. A simple way around it is to install binaries from `Christoph Gohlke's website <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_ for the packages that throw errors when you do ``pip install -r develop.txt``.
+5. If you are on Windows, ``pip``-installation of some packages will fail if you don't have a compiler correctly configured. One such example is NumPy. A simple way around it is to install binaries from `Christoph Gohlke's website <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_ for the packages that throw errors when you do ``pip install -r develop.txt``.
 
 
 Make Sphinx documentation
