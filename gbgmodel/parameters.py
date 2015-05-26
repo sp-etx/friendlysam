@@ -1,28 +1,47 @@
 # -*- coding: utf-8 -*-
 
-DEFAULTS = {
-    'step' : 12, # model time units to lock per simulation step
-    'time_res' : 2, # time resolution in hours
-    'sched_hzn_hours' : 72, # in hours
-    'tmax_hours' : 8760, # hours
-    'tax_NG_CHP' : 24, #SEK/MWh(LHV)
-    'tax_NG_heat' : 250, #SEK/MWh(LHV)
-    'tax_oil_heat' : 300, #SEK/MWh(LHV)
-    'prices/heating_oil' : 500, #SEK/MWh(LHV)
-    'prices/bio_oil' : 500, #SEK/MWh(LHV)
-    'prices/natural_gas' : 280, #SEK/MWh(LHV)
-    'prices/wood_chips' : 200, #SEK/MWh(LHV)
-    'prices/wood_pellets' : 320, #SEK/MWh(LHV)
-    'prices/green_certificates' : 200, #SEK/MWh
-    'electricity_tax' : 180, #SEK/MWh
-    'certificate_quota' : 0.15,
-    'power_demand' : data.power_demand(),
-    'wind_power' : data.wind_power(),
-    'dh_demand' : data.district_heating_demand()
+from copy import deepcopy
+import pandas as pd
+from pd import Timedelta
+
+_DEFAULT_PARAMETERS = {
+    'time_unit' : pd.Timedelta('2h'), # Time unit
+    'step' : pd.Timedelta('12h'), # Time span to lock in each step (should be multiple of time_unit)
+    'horizon' : pd.Timedelta('72h'), # Planning horizon (should be multiple of time_unit)
+    'prices': {
+        Resources.power: data.power_price(), # SEK/MWh
+        Resources.heating_oil: 500, # SEK/MWh (LHV)
+        Resources.bio_oil: 500, # SEK/MWh (LHV)
+        Resources.natural_gas: 280, # SEK/MWh (LHV)
+        Resources.wood_chips: 200, # SEK/MWh (LHV)
+        Resources.wood_pellets: 320, # SEK/MWh (LHV)
+    },
+    'green_certificates': {
+        'price': 200, # SEK/MWh
+        'quota': .15
+    },
+    'exogenous_nodes': {
+        'City': {
+            'consumption': {
+                Resources.heat: data.heat_history().sum(axis=1)
+                Resources.power: data.power_demand()
+            }
+        }
+        'Renova CHP': {
+            'production': {
+                Resources.heat: data.heat_history()['Renova CHP']
+            }
+        },
+        'Wind power': {
+            'production': {
+                Resources.power: data.wind_power()
+            }
+        }
+    }
 }
 
-def get_custom(**kwargs):
-    parameters = copy.deepcopy(DEFAULTS)
+def get_parameters(**kwargs):
+    _parameters = copy.deepcopy(DEFAULT_PARAMETERS)
     parameters.update(kwargs)
     return parameters
 
@@ -85,148 +104,197 @@ def make_model(parameters, seed=None):
         horizon=parameters['sched_hzn'],
         step=parameters['step'])
 
-    renova = LinearCHP(
-            name='Renova CHP',
-            eta=uncertain.relative(0.95, 0.03),
-            alpha=uncertain.relative(0.14, 0.1),
-            fuel=Resources.msw,
-            fuel_cost=0)
+    parts = make_parts(parameters, uncertain)
 
-    renova.constraints += (
-        lambda t: renova.production[Resources.heat](t) == heat_history['Renova CHP'](t))
-    model.add_part(renova)
+    # No explicit distribution channels in this model. Just create a cluster for each resource.
+    for r in Resources:
+        cluster = Cluster(resource=r)
+        cluster.add_parts(p for p in parts if r in p.resources)
+        model.add_part(cluster)
 
-    model.add_part(
+
+def make_parts(parameters, uncertain):
+    parts = set()
+
+    taxation = make_tax_function(parameters)
+
+    for r in Resources:
+        parts.add(Import(resource=r, price=parameters['prices'][r]))
+
+    for name, flows in parameters['exogenous_nodes']:
+        node = fs.Node(name=name)
+        for resource, demand in flows.consumption.items():
+            node.consumption[resource] = lambda t: demand[t]
+        for resource, production in flows.production.items():
+            node.production[resource] = lambda t: production[t]
+        parts.add(node)
+
+    # Conversion factor from hour to model time unit:
+    # "hour" is the number of model time steps per hour.
+    # So when capacities/consumption/etc per time step in plants below are stated like
+    # "600 / hour", then think "600 MWh per hour".
+    # Makes sense because
+    #   larger time unit --> smaller value of "hour" --> larger max output per time step.
+    hour = Timedelta('1h') / parameters['time_unit']
+
+    parts.add(
         LinearCHP(
-            name = 'Rya CHP',
-            eta = uncertain.relative(0.925, 0.03),
-            alpha = uncertain.relative(0.86, 0.05),
-            Fmax = uncertain.relative(600 * parameters['time_res'], 0.05),
-            Fmin = uncertain.relative(600 * 0.20 * parameters['time_res'], 0.3),
-            fuel = Resources.natural_gas,
-            fuel_cost = parameters['prices/natural_gas'] + parameters['tax_NG_CHP']))
+            name='Rya CHP',
+            eta=uncertain.relative(0.925, 0.03),
+            alpha=uncertain.relative(0.86, 0.05),
+            Fmax=uncertain.relative(600, 0.05) / hour,
+            Fmin=uncertain.relative(600 * 0.20, 0.3) / hour,
+            fuel=Resources.natural_gas,
+            taxation=taxation))
 
-    
-    # This is not a good formulation
-    certificate_income = (eta * alpha / (1 + alpha)) * parameters['prices/green_certificates']
-    model.add_part(
+    parts.add(
         LinearSlowCHP(
-            name = 'Sävenäs CHP',
-            eta = uncertain.relative(1.07, 0.05),
-            alpha = uncertain.relative(0.08, 0.2),
-            Fmax = uncertain.relative(130 * parameters['time_res'], 0.1),
-            Fmin = uncertain.relative(130 * 0.3 * parameters['time_res'], 0.5),
-            startup_time = int(np.round(uncertain.absolute(6, -4, 6) / parameters['time_res'])), #hours
-            fuel = Resources.biofuel, #flis + lite bioolja
-            fuel_cost = parameters['prices/wood_chips'] - certificate_income))
+            name='Sävenäs CHP',
+            eta=uncertain.relative(1.07, 0.05),
+            alpha=uncertain.relative(0.08, 0.2),
+            Fmax=uncertain.relative(130, 0.1) / hour,
+            Fmin=uncertain.relative(130 * 0.3, 0.5) / hour,
+            startup_time=np.round(uncertain.absolute(6, -4, 6) * hour),
+            fuel=Resources.wood_chips,
+            taxation=taxation)
 
-    model.add_part(
-        LinearCHP(
-            name = 'Högsbo CHP',
-            eta = uncertain.relative(0.85, 0.05),
-            alpha = uncertain.relative(0.8, 0.05),
-            Fmax = uncertain.relative(34 * parameters['time_res'], 0.1),
-            fuel = Resources.natural_gas,
-            fuel_cost = parameters['prices/natural_gas'] + parameters['tax_NG_CHP']))
-
-    model.add_part(
-        Boiler(
-            name = 'Sävenäs boiler A',
-            eta = uncertain.relative(1.03, 0.05),
-            Fmax = uncertain.relative(89 * parameters['time_res'], 0.1),
-            fuel = Resources.natural_gas,
-            fuel_cost = parameters['prices/natural_gas'] + parameters['tax_NG_heat']))
-
-    model.add_part(
-        Boiler(
-            name = 'Sävenäs boiler B',
-            eta = uncertain.relative(0.89, 0.05),
-            Fmax = uncertain.relative(89 * parameters['time_res'], 0.1),
-            fuel = Resources.natural_gas,
-            fuel_cost = parameters['prices/natural_gas'] + parameters['tax_NG_heat']))
-
-    model.add_part(
-        Boiler(
-            name = 'Rosenlund boiler B',
-            eta = uncertain.relative(0.93, 0.05),
-            Fmax = 155 * parameters['time_res'],
-            fuel = Resources.natural_gas,
-            fuel_cost = parameters['prices/natural_gas'] + parameters['tax_NG_heat']))
-
-    model.add_part(
-        Boiler(
-            name = 'Rosenlund boiler A',
-            eta = uncertain.relative(0.9, 0.05),
-            Fmax = uncertain.relative(465 * parameters['time_res'], 0.1),
-            fuel = Resources.heating_oil,
-            fuel_cost = parameters['prices/heating_oil'] + parameters['tax_oil_heat']))
-
-    model.add_part(
-        Boiler(
-            name = 'Rya boiler',
-            eta = uncertain.relative(0.87, 0.05),
-            Fmax = uncertain.relative(115 * parameters['time_res'], 0.1),
-            fuel = Resources.biofuel,
-            fuel_cost = parameters['prices/wood_pellets'])) #pellets + lite naturgas
-
-    model.add_part(
-        Boiler(
-            name = 'Tynnered boiler',
-            eta = uncertain.relative(0.9, 0.05),
-            Fmax = uncertain.relative(22 * parameters['time_res'], 0.2),
-            fuel = Resources.heating_oil,
-            fuel_cost = parameters['prices/heating_oil'] + parameters['tax_oil_heat']))
-
-    model.add_part(
-        Boiler(
-            name = 'Angered boiler',
-            eta = uncertain.relative(0.9, 0.05),
-            Fmax = uncertain.relative(137 * parameters['time_res'], 0.1),
-            fuel = Resources.biofuel,
-            fuel_cost = parameters['prices/bio_oil']))
-
-    model.add_part(
+    parts.add(
         Import(
-            name = 'Industrial waste heat',
-            resource = Resources.heat,
-            max_import = uncertain.relative(150, 0.2) * parameters['time_res'],
-            max_export = 0,
-            price = 0))
+            name='Industrial waste heat',
+            resource=Resources.heat,
+            capacity=uncertain.relative(140, 0.2) / hour,
+            price=0))
+    # Waste heat price is not actually zero, but we can assume that it is always cheaper
+    # than other source, so results should be reasonable if we set cost == 0.
 
-    model.add_part(
+    parts.add(
         HeatPump(
-            name = 'Rya heat pump',
-            COP = uncertain.absolute(3.3, 0.2),
-            Qmax = uncertain.relative(100, 0.2) * parameters['time_res'],
-            power_cost = (parameters['certificate_quota'] * 
-                parameters['prices/green_certificates'] +
-                parameters['electricity_tax'])))
+            name='Rya heat pump',
+            COP=uncertain.absolute(3.3, 0.2),
+            Qmax=uncertain.relative(100, 0.2) / hour,
+            taxation=taxation))
 
-    model.add_part(
-        Consumer(
-            name = 'District heating demand',
-            resource = Resources.heat,
-            demand = parameters['dh_demand']))
+    parts.add(
+        LinearCHP(
+            name='Högsbo CHP',
+            eta=uncertain.relative(0.85, 0.05),
+            alpha=uncertain.relative(0.8, 0.05),
+            Fmax=uncertain.relative(34, 0.1) / hour,
+            fuel=Resources.natural_gas,
+            taxation=taxation))
 
-    model.add_part(
-        Consumer(
-            name = 'Power demand',
-            resource = Resources.power,
-            demand = power_demand))
+    parts.add(
+        Boiler(
+            name='Sävenäs boiler A',
+            eta=uncertain.relative(1.03, 0.05),
+            Fmax=uncertain.relative(89, 0.1) / hour,
+            fuel=Resources.natural_gas,
+            taxation=taxation))
 
-    model.add_part(
-        Import(
-            name = 'Power import',
-            resource = Resources.power,
-            cost = power_price))
+    parts.add(
+        Boiler(
+            name='Sävenäs boiler B',
+            eta=uncertain.relative(0.89, 0.05),
+            Fmax=uncertain.relative(89, 0.1) / hour,
+            fuel=Resources.natural_gas,
+            taxation=taxation))
 
-    model.add_part(
-        Import(
-            name = 'Wind power',
-            resource = Resources.power,
-            cost = 0,
-            amount = wind_power))
+    parts.add(
+        Boiler(
+            name='Rosenlund boiler B',
+            eta=uncertain.relative(0.93, 0.05),
+            Fmax=155 / hour,
+            fuel=Resources.natural_gas,
+            taxation=taxation))
 
-    return elements
+    parts.add(
+        Boiler(
+            name='Rosenlund boiler A',
+            eta=uncertain.relative(0.9, 0.05),
+            Fmax=uncertain.relative(465, 0.1) / hour,
+            fuel=Resources.heating_oil,
+            taxation=taxation ))
 
+    parts.add(
+        Boiler(
+            name='Rya boiler',
+            eta=uncertain.relative(0.87, 0.05),
+            Fmax=uncertain.relative(115, 0.1) / hour,
+            fuel=Resources.wood_pellets,
+            taxation=taxation)
+
+    parts.add(
+        Boiler(
+            name='Tynnered boiler',
+            eta=uncertain.relative(0.9, 0.05),
+            Fmax=uncertain.relative(22, 0.2) / hour,
+            fuel=Resources.heating_oil,
+            taxation=taxation))
+
+    parts.add(
+        Boiler(
+            name='Angered boiler',
+            eta=uncertain.relative(0.9, 0.05),
+            Fmax=uncertain.relative(137, 0.1) / hour,
+            fuel=Resources.bio_oil,
+            taxation=taxation))
+
+    return model
+
+
+def make_tax_function(parameters):
+    def net_tax(cons_or_prod=None, resource=None, **kwargs):
+        # Net taxes (taxes - subsidies) for consumption or production of energy
+        # In unit SEK/MWh (lower heating value where applicable)
+
+        if resource not in Resources:
+            raise ValueError('resource {} does not exist'.format(resource))
+
+        is_biofuel = lambda r: (
+            r is Resources.bio_oil or 
+            r is Resources.wood_chips or
+            r is Resources.wood_pellets)
+
+        if cons_or_prod == 'consumption':
+            if resource is Resources.power:
+                energy_tax = 294 # SEK / MWh as of 2015-01-01, most Swedish municipalities
+                cert = parameters['green_certificates']
+                cert_cost = cert['price'] * cert['quota']
+                return energy_tax * cert_cost
+            if is_biofuel(resource):
+                return 0
+            if resource is Resources.natural_gas:
+                carbon_tax = 2.409 # 2409 SEK / 1000 m^3 as of 2015-01-01
+                energy_tax = 939 # 939 SEK / 1000 m^3 as of 2015-01-01
+                if kwargs['chp']:
+                    carbon_tax *= 0 # As of 2013
+                    energy_tax *= 0.3 # As of 2013
+                else:
+                    carbon_tax *= .8 # As of 2014, for other heat production if included in EU ETS
+                tax = (carbon_tax + energy_tax) / (10.9 / 1000) # LHV: 10.9 kWh / m^3 
+                return tax
+            if resource is Resources.heating_oil:
+                # Assuming heating oil means Swedish "Eldningsolja 5"
+                carbon_tax = 3218 # 3218 SEK / m^3 as of 2015-01-01
+                energy_tax = 850 # 850 SEK / m^3 as of 2015-01-01
+                if kwargs['chp']:
+                    carbon_tax *= 0 # As of 2013
+                    energy_tax *= 0.3 # As of 2013
+                else:
+                    carbon_tax *= .8 # As of 2014, for other heat production if included in EU ETS
+                tax = (carbon_tax + energy_tax) / (955 * 11.4 / 1e3) # Density 955 kg/m^3 LHV: 11.4 kWh / kg
+                return tax
+            raise ValueError('Resource {} not supported'.format(resource))
         
+        if cons_or_prod == 'production':
+            if resource is Resources.power:
+                renewable = is_biofuel(kwargs['fuel'])
+                if renewable:
+                    cert = parameters['green_certificates']
+                    return -cert['price']
+            else:
+                return 0
+
+        raise ValueError("cons_or_prod should be 'consumption' or 'production'")
+
+    return net_tax
