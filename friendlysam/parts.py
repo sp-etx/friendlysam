@@ -218,13 +218,19 @@ class Node(Part):
             rhs += self.accumulation[resource](*indices)
 
         return Constraint(lhs == rhs, desc='Balance constraint (resource={})'.format(resource))
-        
+
+
+    @property
+    def resources(self):
+        balance_dicts = (self.consumption, self.production, self.accumulation)
+        return set(chain(*(d.keys() for d in balance_dicts)))
 
     def _all_balance_constraints(self, *indices):
-        balance_dicts = (self.consumption, self.production, self.accumulation)
-        resources = set(chain(*(d.keys() for d in balance_dicts)))
-        resources = list(r for r in resources if r not in self._clusters)
-        return set(self._balance_constraint(r, *indices) for r in resources)
+        # Enforce balance constraints for all resources, except those resources
+        # which this node is in a cluster for. The cluster instead makes an aggregated
+        # balance constraint for those.
+        resources_to_be_balanced = (r for r in self.resources if r not in self._clusters)
+        return set(self._balance_constraint(r, *indices) for r in resources_to_be_balanced)
 
 
 def _get_aggr_func(owner, attr_name, resource):
@@ -260,6 +266,9 @@ class ClusterDict(object):
             self._dict[resource] = _get_aggr_func(self._owner, self._attr_name, resource)
         return self._dict[resource]
 
+    def __iter__(self):
+        for k in self.keys():
+            yield k
 
     def keys(self):
         keys = set()
