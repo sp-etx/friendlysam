@@ -25,8 +25,8 @@ class MyopicDispatchModel(fs.Part):
     def advance(self):
         if self.horizon < self.step:
             raise RuntimeError()
-        opt_times = [self.t + delta_t for delta_t in range(self.horizon)]
-        step_times = [self.t + delta_t for delta_t in range(self.step)]
+
+        opt_times = self.times(self.t, self.horizon)
 
         parts = self.parts() | {self}
 
@@ -36,7 +36,7 @@ class MyopicDispatchModel(fs.Part):
 
         solution = self.solver.solve(problem)
 
-        for p, t in product(parts, step_times):
+        for p, t in product(parts, self.iter_times(self.t, self.step)):
             for v in p.state_variables(t):
                 v.take_value(solution)
 

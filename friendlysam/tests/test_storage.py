@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from itertools import chain
+from itertools import chain, product
 
 from nose.tools import raises
 

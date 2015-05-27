@@ -97,6 +97,18 @@ class Part(object):
 
         self._parts = set()
 
+    def step_time(self, t, step):
+        return t + step
+
+    def iter_times(self, start, num):
+        t = start
+        for i in range(num):
+            yield t
+            t = self.step_time(t, 1)
+
+    def times(self, start, num):
+        return list(self.iter_times(start, num))
+
     @property
     def constraints(self):
         return self._constraints
@@ -351,13 +363,8 @@ class Storage(Node):
             raise InsanityError('Storage accumulation needs at least one index. '
                 'The first index should represent time.')
         t, other_indices = indices[0], indices[1:]
-        if len(other_indices) > 0:
-            next_index = (t+1,) + other_indices
-            this_index = (t,) + other_indices
-        else:
-            next_index = t+1
-            this_index = t
-        return self.volume(next_index) - self.volume(this_index)
+        t_plus_one = self.step_time(t, 1)
+        return self.volume(t_plus_one, *other_indices) - self.volume(*indices)
 
     def _maxchange_constraints(self, *indices):
         acc, maxchange = self.accumulation[self.resource](*indices), self.maxchange
@@ -366,6 +373,9 @@ class Storage(Node):
         return (
             RelConstraint(acc <= maxchange, 'Max net inflow'),
             RelConstraint(-maxchange <= acc, 'Max net outflow'))
+
+    def state_variables(self, *indices):
+        return {self.volume(*indices)}
 
 
 class FlowNetwork(Part):
