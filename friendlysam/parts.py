@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -241,8 +242,20 @@ def _get_aggr_func(owner, attr_name, resource):
             func_dict = getattr(part, attr_name)
             if resource in func_dict:
                 func = func_dict[resource]
-                term = func(*indices)
-                terms.append(term)
+                try:
+                    term = func(*indices)
+                    terms.append(term)
+                except TypeError as e:
+                    if callable(func):
+                        raise
+                    else:
+                        msg = 'The node {} has a non-callable value of {}[{}]: {}'.format(
+                            part,
+                            attr_name,
+                            resource,
+                            repr(func))
+
+                        raise TypeError(msg).with_traceback(sys.exc_info()[2])
 
         return sum(terms)
 
