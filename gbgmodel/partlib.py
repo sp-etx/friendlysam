@@ -9,20 +9,18 @@ from enum import Enum, unique
 import numbers
 
 import friendlysam as fs
-
-import quantities as pq
-
-ENERGY_UNIT = pq.MWh
-TIME_UNIT = pq.hour
+from friendlysam import Constraint, VariableCollection
 
 @unique
 class Resources(Enum):
     natural_gas = 1
     power = 2
     heat = 3
-    msw = 4
-    biofuel = 5
-    heating_oil = 6
+    heating_oil = 4
+    bio_oil = 5
+    wood_chips = 6
+    wood_pellets = 7
+
 
 class Boiler(fs.Node):
     """docstring for Boiler"""
@@ -31,22 +29,22 @@ class Boiler(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            F = fs.VariableCollection(lb=0, ub=kwargs['Fmax'])
+            F = VariableCollection(lb=0, ub=Fmax)
         self.consumption[fuel] = F
-        self.production[Resources.heat] = lambda t: kwargs['eta'] * F(t)
+        self.production[Resources.heat] = lambda t: eta * F(t)
 
         fuel_cons_tax = taxation('consumption', fuel, chp=False)
-        self.cost = lambda t: self.consumption[fuel](t) * fuel_cons_tax(t)
+        self.cost = lambda t: self.consumption[fuel](t) * fuel_cons_tax
 
         self.state_variables = lambda t: {F(t)}
 
 
-def _CHP_cost_func(taxation, fuel):
+def _CHP_cost_func(node, taxation, fuel):
     fuel_cons_tax = taxation('consumption', fuel, chp=True)
     power_prod_tax = taxation('production', Resources.power, fuel=fuel)
     return lambda t: (
-        self.consumption[fuel](t) * fuel_cons_tax(t) +
-        self.production[Resources.power] * power_prod_tax(t))
+        node.consumption[fuel](t) * fuel_cons_tax +
+        node.production[Resources.power](t) * power_prod_tax)
         
 
 class LinearCHP(fs.Node):
@@ -56,48 +54,48 @@ class LinearCHP(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            F = fs.VariableCollection(lb=0, ub=Fmax)
+            F = VariableCollection(lb=0, ub=Fmax)
 
         self.consumption[fuel] = F
         self.production[Resources.heat] = lambda t: F(t) * eta / (alpha + 1)
         self.production[Resources.power] = lambda t: alpha * self.production[Resources.heat](t)
 
         self.state_variables = lambda t: {F(t)}
-        self.cost = _CHP_cost_func(taxation, fuel)
+        self.cost = _CHP_cost_func(self, taxation, fuel)
 
 
 class LinearSlowCHP(fs.Node):
     """docstring for LinearSlowCHP"""
 
-    def __init__(self, startup_time=None, fuel=None, alpha=None, eta=None, 
+    def __init__(self, start_steps=None, fuel=None, alpha=None, eta=None, 
                  Fmin=None, Fmax=None, taxation=None, **kwargs):
         super().__init__(**kwargs)
-
 
         mode_names = ('off', 'starting', 'on')
         with fs.namespace(self):
             modes = OrderedDict(
                 (n, VariableCollection(name=n, domain=fs.Domain.binary)) for n in mode_names)
-            F_on = fs.VariableCollection(lb=0) # Fuel use if on
+            F_on = VariableCollection(lb=0) # Fuel use if on
 
-        self.consumption[fuel] = lambda t: F_on(t) * modes['on'](t) + modes['starting'](t) * Fmin
-        self.production[Resources.heat] = lambda t: modes['on'] * F_on(t) * eta / (alpha + 1)
+        self.consumption[fuel] = lambda t: F_on(t) + modes['starting'](t) * Fmin
+        self.production[Resources.heat] = lambda t: F_on(t) * eta / (alpha + 1)
         self.production[Resources.power] = lambda t: alpha * self.production[Resources.heat](t)
 
-        self.cost = _CHP_cost_func(taxation, fuel)
+        self.cost = _CHP_cost_func(self, taxation, fuel)
 
         on_or_starting = lambda t: modes['on'](t) + modes['starting'](t)
         def mode_constraints(t):
             yield Constraint(
                 sum(m(t) for m in modes.values()) == 1, desc='Exactly one mode at a time')
 
-            recent_sum = sum(on_or_starting(t-tau-1) for tau in range(starting_time))
-            yield Constraint(
-                modes['on'](t) <= recent_sum / int(startup_time),
-                desc="'on' mode is only allowed after startup_time in 'on' and 'starting'")
+            if start_steps > 0:
+                recent_sum = sum(on_or_starting(tau) for tau in self.iter_times(t, -(start_steps+1), 0))
+                yield Constraint(
+                    modes['on'](t) <= recent_sum / start_steps,
+                    desc="'on' mode is only allowed after start_steps in 'on' and 'starting'")
 
             yield Constraint(
-                self.consumption[fuel](t) <= Fmax * modes['on'] + Fmin * modes['starting'],
+                self.consumption[fuel](t) <= Fmax * modes['on'](t) + Fmin * modes['starting'](t),
                 desc='Max fuel use')
 
         self.constraints += mode_constraints
@@ -112,12 +110,12 @@ class HeatPump(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            Q = fs.VariableCollection(lb=0, ub=Qmax)
+            Q = VariableCollection(lb=0, ub=Qmax)
         self.production[Resources.heat] = Q
-        self.consumption[Resources.power] = lambda t: Q / COP
+        self.consumption[Resources.power] = lambda t: Q(t) / COP
 
         power_cons_tax = taxation('consumption', Resources.power)
-        self.cost = lambda t: self.consumption[Resources.power](t) * power_cons_tax(t)
+        self.cost = lambda t: self.consumption[Resources.power](t) * power_cons_tax
 
         self.state_variables = lambda t: {Q(t)}
 
@@ -129,7 +127,7 @@ class Import(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            quantity = fs.VariableCollection(lb=0, ub=capacity)
+            quantity = VariableCollection(lb=0, ub=capacity)
 
         self.production[resource] = quantity
 

@@ -1,15 +1,47 @@
 # -*- coding: utf-8 -*-
 
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 from copy import deepcopy
+
 import pandas as pd
-from pd import Timedelta
+import numpy as np
+
+import friendlysam as fs
+from partlib import Resources, HeatPump, Import, LinearCHP, LinearSlowCHP, Boiler
+
+data_dir = 'data'
+
+heat_history = pd.read_csv(
+    'data/heat_history.csv',
+    encoding='utf-8',
+    index_col='Time (UTC)',
+    parse_dates=True)
+
+power_demand = pd.read_csv(
+    'data/power_demand.csv',
+    encoding='utf-8',
+    index_col='Time (UTC)',
+    parse_dates=True,
+    squeeze=True)
+
+power_price = pd.read_csv(
+    'data/power_price.csv',
+    encoding='utf-8',
+    index_col='Time (UTC)',
+    parse_dates=True,
+    squeeze=True)
+
+
 
 _DEFAULT_PARAMETERS = {
-    'time_unit' : pd.Timedelta('2h'), # Time unit
-    'step' : pd.Timedelta('12h'), # Time span to lock in each step (should be multiple of time_unit)
-    'horizon' : pd.Timedelta('72h'), # Planning horizon (should be multiple of time_unit)
+    't0': pd.Timestamp('2013-01-01'),
+    'time_unit' : pd.Timedelta('12h'), # Time unit
+    'step' : pd.Timedelta('12h'), # Time span to lock in each step
+    'horizon' : pd.Timedelta('72h'), # Planning horizon
     'prices': {
-        Resources.power: data.power_price(), # SEK/MWh
+        Resources.power: power_price, # SEK/MWh
         Resources.heating_oil: 500, # SEK/MWh (LHV)
         Resources.bio_oil: 500, # SEK/MWh (LHV)
         Resources.natural_gas: 280, # SEK/MWh (LHV)
@@ -19,98 +51,38 @@ _DEFAULT_PARAMETERS = {
     'green_certificates': {
         'price': 200, # SEK/MWh
         'quota': .15
-    },
-    'exogenous_nodes': {
-        'City': {
-            'consumption': {
-                Resources.heat: data.heat_history().sum(axis=1)
-                Resources.power: data.power_demand()
-            }
-        }
-        'Renova CHP': {
-            'production': {
-                Resources.heat: data.heat_history()['Renova CHP']
-            }
-        },
-        'Wind power': {
-            'production': {
-                Resources.power: data.wind_power()
-            }
-        }
     }
 }
 
 def get_parameters(**kwargs):
-    _parameters = copy.deepcopy(DEFAULT_PARAMETERS)
+    parameters = deepcopy(_DEFAULT_PARAMETERS)
     parameters.update(kwargs)
     return parameters
-
-
-class Randomizer(object):
-    """docstring for Randomizer"""
-    def __init__(self, seed):
-        super().__init__()
-        self._random_state = np.random.RandomState(seed)
-
-
-    def relative(self, value, *args, **kwargs):
-        return value * self.factor(*args, **kwargs)
-
-
-    def absolute(self, value, *args, **kwargs):
-        return value + self.term(*args, **kwargs)
-
-
-    def factor(self, a, b=None):
-        if b is None:
-            low, high = 1 - a, 1 + a
-        else:
-            low, high = a, b
-
-        return self._random_state.uniform(low, high)
-
-
-    def term(self, a, b=None):
-        if b is None:
-            low, high = -a, a
-        else:
-            low, high = a, b
-        return self._random_state.uniform(low, high)
-
-
-class DummyRandomizer(object):
-    """docstring for DummyRandomizer"""
-
-    def _do_nothing(value, *args, **kwargs):
-        return value
-    
-    relative = _do_nothing
-    absolute = _do_nothing
-    
-    def factor(self, *args, **kwargs):
-        return 1
-
-    def term(self, *args, **kwargs):
-        return 0        
 
 
 def make_model(parameters, seed=None):
     uncertain = DummyRandomizer() if seed is None else Randomizer(seed)
 
-    parameters['sched_hzn'] = parameters['sched_hzn_hours'] /  parameters['time_res']
-
     model = fs.models.MyopicDispatchModel(
         t0=parameters['t0'],
-        horizon=parameters['sched_hzn'],
-        step=parameters['step'])
+        horizon=int(parameters['horizon'] / parameters['time_unit']),
+        step=int(parameters['step'] / parameters['time_unit']))
 
     parts = make_parts(parameters, uncertain)
 
+    def step_time(t, step):
+        return t + step * parameters['time_unit']
+
+    for p in parts | {model}:
+        p.step_time = step_time
+
     # No explicit distribution channels in this model. Just create a cluster for each resource.
     for r in Resources:
-        cluster = Cluster(resource=r)
-        cluster.add_parts(p for p in parts if r in p.resources)
+        cluster = fs.Cluster(resource=r)
+        cluster.add_parts(*(p for p in parts if r in p.resources))
         model.add_part(cluster)
+
+    return model
 
 
 def make_parts(parameters, uncertain):
@@ -119,15 +91,8 @@ def make_parts(parameters, uncertain):
     taxation = make_tax_function(parameters)
 
     for r in Resources:
-        parts.add(Import(resource=r, price=parameters['prices'][r]))
-
-    for name, flows in parameters['exogenous_nodes']:
-        node = fs.Node(name=name)
-        for resource, demand in flows.consumption.items():
-            node.consumption[resource] = lambda t: demand[t]
-        for resource, production in flows.production.items():
-            node.production[resource] = lambda t: production[t]
-        parts.add(node)
+        if r is not Resources.heat:
+            parts.add(Import(resource=r, price=parameters['prices'][r]))
 
     # Conversion factor from hour to model time unit:
     # "hour" is the number of model time steps per hour.
@@ -135,15 +100,28 @@ def make_parts(parameters, uncertain):
     # "600 / hour", then think "600 MWh per hour".
     # Makes sense because
     #   larger time unit --> smaller value of "hour" --> larger max output per time step.
-    hour = Timedelta('1h') / parameters['time_unit']
+    hour = pd.Timedelta('1h') / parameters['time_unit']
+
+    series_reader = lambda series: series.loc.__getitem__
+    city = fs.Node(name='City')
+    city.consumption[Resources.heat] = series_reader(heat_history.sum(axis=1))
+    city.consumption[Resources.power] = series_reader(power_demand)
+    city.cost = lambda t: 0
+    parts.add(city)
+
+    solid_waste_incineration = fs.Node(name='Renova CHP')
+    solid_waste_incineration.production[Resources.heat] = series_reader(heat_history['Renova CHP'])
+    solid_waste_incineration.cost = lambda t: 0
+    parts.add(solid_waste_incineration)
 
     parts.add(
-        LinearCHP(
+        LinearSlowCHP(
             name='Rya CHP',
             eta=uncertain.relative(0.925, 0.03),
             alpha=uncertain.relative(0.86, 0.05),
             Fmax=uncertain.relative(600, 0.05) / hour,
             Fmin=uncertain.relative(600 * 0.20, 0.3) / hour,
+            start_steps=int(np.round(.5 * hour)),
             fuel=Resources.natural_gas,
             taxation=taxation))
 
@@ -154,9 +132,9 @@ def make_parts(parameters, uncertain):
             alpha=uncertain.relative(0.08, 0.2),
             Fmax=uncertain.relative(130, 0.1) / hour,
             Fmin=uncertain.relative(130 * 0.3, 0.5) / hour,
-            startup_time=np.round(uncertain.absolute(6, -4, 6) * hour),
+            start_steps=int(np.round(uncertain.absolute(6, -4, 6) * hour)),
             fuel=Resources.wood_chips,
-            taxation=taxation)
+            taxation=taxation))
 
     parts.add(
         Import(
@@ -221,7 +199,7 @@ def make_parts(parameters, uncertain):
             eta=uncertain.relative(0.87, 0.05),
             Fmax=uncertain.relative(115, 0.1) / hour,
             fuel=Resources.wood_pellets,
-            taxation=taxation)
+            taxation=taxation))
 
     parts.add(
         Boiler(
@@ -239,7 +217,7 @@ def make_parts(parameters, uncertain):
             fuel=Resources.bio_oil,
             taxation=taxation))
 
-    return model
+    return parts
 
 
 def make_tax_function(parameters):
@@ -276,7 +254,7 @@ def make_tax_function(parameters):
             if resource is Resources.heating_oil:
                 # Assuming heating oil means Swedish "Eldningsolja 5"
                 carbon_tax = 3218 # 3218 SEK / m^3 as of 2015-01-01
-                energy_tax = 850 # 850 SEK / m^3 as of 2015-01-01
+                energy_tax = 850 # 850 SEK / m^3 as of 2015-01-01 for tax reduced heating oil
                 if kwargs['chp']:
                     carbon_tax *= 0 # As of 2013
                     energy_tax *= 0.3 # As of 2013
@@ -289,12 +267,64 @@ def make_tax_function(parameters):
         if cons_or_prod == 'production':
             if resource is Resources.power:
                 renewable = is_biofuel(kwargs['fuel'])
-                if renewable:
-                    cert = parameters['green_certificates']
-                    return -cert['price']
+                return -parameters['green_certificates']['price'] if renewable else 0
             else:
                 return 0
 
         raise ValueError("cons_or_prod should be 'consumption' or 'production'")
 
     return net_tax
+
+
+class Randomizer(object):
+    """docstring for Randomizer"""
+    def __init__(self, seed):
+        super().__init__()
+        self._random_state = np.random.RandomState(seed)
+
+
+    def relative(self, value, *args, **kwargs):
+        return value * self.factor(*args, **kwargs)
+
+
+    def absolute(self, value, *args, **kwargs):
+        return value + self.term(*args, **kwargs)
+
+
+    def factor(self, a, b=None):
+        if b is None:
+            low, high = 1 - a, 1 + a
+        else:
+            low, high = a, b
+
+        return self._random_state.uniform(low, high)
+
+
+    def term(self, a, b=None):
+        if b is None:
+            low, high = -a, a
+        else:
+            low, high = a, b
+        return self._random_state.uniform(low, high)
+
+class DummyRandomizer(object):
+    """docstring for DummyRandomizer"""
+
+    def _do_nothing(value, *args, **kwargs):
+        return value
+
+    relative = _do_nothing
+    absolute = _do_nothing
+
+    def factor(self, *args, **kwargs):
+        return 1
+
+    def term(self, *args, **kwargs):
+        return 0
+
+if __name__ == '__main__':
+    parameters = get_parameters()
+    m = make_model(parameters, seed=1)
+    m.constraints(parameters['t0'])
+    m.solver = fs.get_solver()
+    m.advance()
