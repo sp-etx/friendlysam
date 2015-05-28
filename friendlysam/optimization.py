@@ -189,24 +189,6 @@ class Mul(_Operation, _MathEnabled):
     _format = '{} * {}'
     _priority = 2
 
-    def __new__(cls, a, b):
-        if isinstance(a, numbers.Number):
-            if a == 0:
-                return 0
-            elif a == 1:
-                return b
-
-        if isinstance(b, numbers.Number):
-            if b == 0:
-                return 0
-            elif b == 1:
-                return a
-
-        super_new = super().__new__
-        if super_new is object.__new__:
-            return super_new(cls)
-        return super_new(cls, a, b)
-
     def _evaluate(self, a, b):
         return a * b
 
