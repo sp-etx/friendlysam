@@ -2,6 +2,7 @@
 
 import logging
 logger = logging.getLogger(__name__)
+import sys
 
 from contextlib import contextmanager
 from itertools import chain
@@ -53,8 +54,10 @@ class _Operation(object):
     def __init__(self, *args):
         super().__init__()
         for a in args:
-            if not isinstance(a, (numbers.Number, _MathEnabled)):
-                msg = 'cannot apply operator {} on {}'.format(self.__class__, a)
+            if isinstance(a, VariableCollection):
+                msg = (
+                    'Cannot apply {} on the VariableCollection {}. '
+                    'Did you forget an index?').format(self.__class__, a)
                 raise ValueError(msg).with_traceback(sys.exc_info()[2])
         self._args = tuple(args)
 
