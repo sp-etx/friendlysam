@@ -66,7 +66,7 @@ class PulpSolver(object):
         return LpVariable(name, **options)
 
     def solve(self, problem):
-        pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables if not hasattr(v, 'value')}
+        pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables}
 
         if isinstance(problem.objective, fs.Minimize):
             sense = LpMinimize
