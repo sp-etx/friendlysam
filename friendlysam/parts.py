@@ -100,14 +100,12 @@ class Part(object):
     def step_time(self, t, step):
         return t + step
 
-    def iter_times(self, start, num):
-        t = start
-        for i in range(num):
-            yield t
-            t = self.step_time(t, 1)
+    def iter_times(self, start, *range_args):
+        for step in range(*range_args):
+            yield self.step_time(start, step)
 
-    def times(self, start, num):
-        return list(self.iter_times(start, num))
+    def times(self, start, *range_args):
+        return list(self.iter_times(start, *range_args))
 
     @property
     def constraints(self):
