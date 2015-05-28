@@ -70,6 +70,10 @@ class _Operation(object):
         return float(self.evaluate({}))
 
     @property
+    def variables(self):
+        return set(l for l in self.leaves if isinstance(l, Variable))
+
+    @property
     def leaves(self):
         leaves = set()
         for a in self._args:
@@ -216,11 +220,6 @@ class Variable(_MathEnabled):
         self.constraints = set()
 
 
-    @property
-    def leaves(self):
-        return (self,)
-
-
     def evaluate(self, replacements=None):
         with ignored(AttributeError):
             return self.value
@@ -303,7 +302,7 @@ class Constraint(_ConstraintBase):
 
     @property
     def variables(self):
-        return tuple(l for l in self.expr.leaves if isinstance(l, Variable))
+        return self.expr.variables
     
 
 
@@ -349,7 +348,7 @@ class _Objective(object):
 
     @property
     def variables(self):
-        return tuple(l for l in self.expr.leaves if isinstance(l, Variable))
+        return self.expr.variables
     
 
 class Maximize(_Objective):
@@ -431,26 +430,32 @@ class Problem(object):
 
     @property
     def variables(self):
-        sources = set((self.objective,)) | self.constraints
-        return frozenset(chain(*(source.variables for source in sources)))
+        v, c = self._vars_and_constraints()
+        return v
+
+    def _vars_and_constraints(self):
+        visited_variables = set()
+        visited_constraints = set()
+
+        new_variables = set(self.objective.variables)
+        new_constraints = set(self._constraints)
+        while new_variables or new_constraints:
+            new_variables |= set(chain(*(c.variables for c in new_constraints)))
+            new_variables -= visited_variables
+
+            visited_variables.update(new_variables)
+            visited_constraints.update(new_constraints)
+
+            new_constraints = set(chain(*(v.constraints for v in new_variables)))
+            new_constraints -= visited_constraints
+
+
+        return visited_variables, visited_constraints
 
     @property
     def constraints(self):
-        all_constraints = set()
-
-        # Begin with the explicitly added constraints AND any constraints that come with
-        # the variables of the objective function.
-        new_constraints = set(self._constraints)
-        new_constraints.update(chain(*(v.constraints for v in self.objective.variables)))
-
-        # Then add constraints that come variables used in these constraints.
-        # Search through variables' constraints, etc, until no more are found.
-        while len(new_constraints) > 0:
-            all_constraints.update(new_constraints)
-            variables = chain(*(c.variables for c in new_constraints))
-            potentially_new_constraints = set(chain(*(v.constraints for v in variables)))
-            new_constraints = potentially_new_constraints - all_constraints
-        return frozenset(all_constraints)
+        v, c = self._vars_and_constraints()
+        return c
 
     def solve(self):
         """Try to solve the optimization problem"""
