@@ -36,17 +36,17 @@ def test_simple_SOS1():
             assert(approx(vs[i].value, 0))
 
 
-def test_simple_pwa():
-    pwa = fs.PiecewiseAffine((1, 1.5, 2), name='aoeu')
-    prob = fs.Problem()
-    prob.objective = fs.Minimize(pwa.func([3, 2, 4]))
+# def test_simple_pwa():
+#     pwa = fs.PiecewiseAffine((1, 1.5, 2), name='aoeu')
+#     prob = fs.Problem()
+#     prob.objective = fs.Minimize(pwa.func([3, 2, 4]))
 
-    solution = default_solver.solve(prob)
-    print(solution)
-    for var in pwa.variables:
-        var.take_value(solution)
+#     solution = default_solver.solve(prob)
+#     print(solution)
+#     for var in pwa.variables:
+#         var.take_value(solution)
 
-    assert(approx(pwa.arg.value, 1.5))
+#     assert(approx(pwa.arg.value, 1.5))
 
 
 if __name__ == '__main__':

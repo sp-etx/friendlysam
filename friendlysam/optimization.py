@@ -217,7 +217,6 @@ class Variable(_MathEnabled):
         self.lb = lb
         self.ub = ub
         self.domain = domain
-        self.constraints = set()
 
 
     def evaluate(self, replacements=None):
@@ -359,51 +358,6 @@ class Minimize(_Objective):
     """docstring for Minimize"""
     pass
 
-
-class PiecewiseAffine(object):
-    """docstring for PiecewiseAffine"""
-    def __init__(self, points, name=None):
-        self._name_base = name
-        self._points = tuple(p for p in points)
-        self._variables = tuple(self._make_variable(p) for p in points)
-        self._arg = self.func(self._points)
-
-        constraints = ({
-            SOS2(self._variables, desc='PiecewiseAffine variables'),
-            Constraint(sum(self._variables) == 1, desc='PiecewiseAffine sum')} | 
-            {Constraint(w >= 0, 'Nonnegative weight in PiecewiseAffine')
-             for w in self._variables})
-
-        for variable in self._variables:
-            variable.constraints = constraints
-
-
-    @property
-    def variables(self):
-        return self._variables
-
-
-    @property
-    def points(self):
-        return self._points
-
-
-    @property
-    def arg(self):
-        return self._arg
-
-
-    def _make_variable(self, point):
-        return Variable(
-            name='{}_{}'.format(self._name_base, point),
-            lb=0,
-            ub=1,
-            domain=Domain.real)
-
-    def func(self, values):
-        return sum(val * variable for val, variable in zip(values, self._variables))
-
-
 class Problem(object):
     """An optimization problem"""
     def __init__(self, constraints=None, objective=None):
@@ -430,32 +384,12 @@ class Problem(object):
 
     @property
     def variables(self):
-        v, c = self._vars_and_constraints()
-        return v
-
-    def _vars_and_constraints(self):
-        visited_variables = set()
-        visited_constraints = set()
-
-        new_variables = set(self.objective.variables)
-        new_constraints = set(self._constraints)
-        while new_variables or new_constraints:
-            new_variables |= set(chain(*(c.variables for c in new_constraints)))
-            new_variables -= visited_variables
-
-            visited_variables.update(new_variables)
-            visited_constraints.update(new_constraints)
-
-            new_constraints = set(chain(*(v.constraints for v in new_variables)))
-            new_constraints -= visited_constraints
-
-
-        return visited_variables, visited_constraints
+        sources = set(self.constraints) | {self.objective}
+        return set(chain(*(src.variables for src in sources)))
 
     @property
     def constraints(self):
-        v, c = self._vars_and_constraints()
-        return c
+        return self._constraints
 
     def solve(self):
         """Try to solve the optimization problem"""
