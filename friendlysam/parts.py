@@ -357,6 +357,8 @@ class Storage(Node):
         self.constraints += self._maxchange_constraints
 
     def _accumulation(self, *indices):
+        # The reason for this formulation is to make useful error messages. Otherwise
+        # we could just have the signature func(self, t, *other_indices).
         if len(indices) == 0:
             raise InsanityError('Storage accumulation needs at least one index. '
                 'The first index should represent time.')
@@ -416,4 +418,4 @@ class FlowNetwork(Part):
         return 0
 
     def state_variables(self, *indices):
-        return tuple(var(*indices) for var in self._flows)
+        return tuple(var(*indices) for var in self._flows.values())
