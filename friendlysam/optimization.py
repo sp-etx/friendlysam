@@ -146,7 +146,7 @@ class _MathEnabled(object):
     def __rmul__(self, other):
         return 0 if _is_zero(other) else Mul(other, self)
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         return self * (1/other) # Takes care of division by scalars at least
 
     def __neg__(self):
