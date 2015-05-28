@@ -358,6 +358,32 @@ class Minimize(_Objective):
     """docstring for Minimize"""
     pass
 
+def dot(a, b):
+    return sum(ai * bi for ai, bi in zip(a, b))
+
+def piecewise_affine(points, name=None):
+    points = dict(points).items()
+    points = sorted(points, key=lambda p: p[0])
+    x_vals, y_vals = zip(*points)
+
+    v = VariableCollection(name=name, lb=0, ub=1, domain=Domain.real)
+    variables = tuple(v(x) for x in x_vals)
+    x = dot(x_vals, variables)
+    y = dot(y_vals, variables)
+    constraints = piecewise_affine_constraints(variables, include_lb=False)
+    return x, y, constraints
+
+def piecewise_affine_constraints(variables, include_lb=True):
+    return set.union(
+        {
+            SOS2(variables, desc='Picewise affine'),
+            Constraint(sum(variables) == 1, desc='Piecewise affine sum')
+        },
+        {
+            Constraint(v >= 0, 'Piecewise affine weight') for v in variables
+        })
+
+
 class Problem(object):
     """An optimization problem"""
     def __init__(self, constraints=None, objective=None):

@@ -36,18 +36,37 @@ def test_simple_SOS1():
             assert(approx(vs[i].value, 0))
 
 
-# def test_simple_pwa():
-#     pwa = fs.PiecewiseAffine((1, 1.5, 2), name='aoeu')
-#     prob = fs.Problem()
-#     prob.objective = fs.Minimize(pwa.func([3, 2, 4]))
+def test_simple_pwa_1():
+    x_vals = (1, 1.5, 2)
+    y_vals = [3, 2, 4]
+    x, y, constraints = fs.optimization.piecewise_affine(zip(x_vals, y_vals), name='aoeu')
+    prob = fs.Problem()
+    prob.objective = fs.Minimize(y)
+    prob.add(constraints)
 
-#     solution = default_solver.solve(prob)
-#     print(solution)
-#     for var in pwa.variables:
-#         var.take_value(solution)
+    solution = default_solver.solve(prob)
+    print(solution)
+    for var in x.variables:
+        var.take_value(solution)
 
-#     assert(approx(pwa.arg.value, 1.5))
+    assert(approx(x.value, 1.5))
+    assert(approx(y.value, 2))
+
+def test_simple_pwa_2():
+    points = {1: 3, 1.5: 2, 2: 4}
+    x, y, constraints = fs.optimization.piecewise_affine(points, name='aoeu')
+    prob = fs.Problem()
+    prob.objective = fs.Maximize(y)
+    prob.add(constraints)
+
+    solution = default_solver.solve(prob)
+    print(solution)
+    for var in x.variables:
+        var.take_value(solution)
+
+    assert(approx(x.value, 2))
+    assert(approx(y.value, 4))
 
 
 if __name__ == '__main__':
-    test_simple_pwa()
+    test_simple_pwa_2()
