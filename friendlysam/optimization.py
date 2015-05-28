@@ -52,6 +52,10 @@ class _Operation(object):
     """docstring for _Operation"""
     def __init__(self, *args):
         super().__init__()
+        for a in args:
+            if not isinstance(a, (numbers.Number, _MathEnabled)):
+                msg = 'cannot apply operator {} on {}'.format(self.__class__, a)
+                raise ValueError(msg).with_traceback(sys.exc_info()[2])
         self._args = tuple(args)
 
 
