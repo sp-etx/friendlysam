@@ -125,7 +125,8 @@ class Part(object):
     def __str__(self):
         return self.name
 
-    def __getitem__(self, name):
+
+    def find(self, name):
         matches = [part for part in self.parts() if part.name == name]
         if len(matches) == 1:
             return matches[0]
