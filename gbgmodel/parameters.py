@@ -13,25 +13,31 @@ from partlib import Resources, HeatPump, Import, LinearCHP, LinearSlowCHP, Boile
 
 data_dir = 'data'
 
-heat_history = pd.read_csv(
-    'data/heat_history.csv',
-    encoding='utf-8',
-    index_col='Time (UTC)',
-    parse_dates=True)
+def get_heat_history(time_unit):
+    heat_history = pd.read_csv(
+        'data/heat_history.csv',
+        encoding='utf-8',
+        index_col='Time (UTC)',
+        parse_dates=True)
+    return heat_history.resample(time_unit, how='sum')
 
-power_demand = pd.read_csv(
-    'data/power_demand.csv',
-    encoding='utf-8',
-    index_col='Time (UTC)',
-    parse_dates=True,
-    squeeze=True)
+def get_power_demand(time_unit):
+    power_demand = pd.read_csv(
+        'data/power_demand.csv',
+        encoding='utf-8',
+        index_col='Time (UTC)',
+        parse_dates=True,
+        squeeze=True)
+    return power_demand.resample(time_unit, how='sum')
 
-power_price = pd.read_csv(
-    'data/power_price.csv',
-    encoding='utf-8',
-    index_col='Time (UTC)',
-    parse_dates=True,
-    squeeze=True)
+def get_power_price(time_unit):
+    power_price = pd.read_csv(
+        'data/power_price.csv',
+        encoding='utf-8',
+        index_col='Time (UTC)',
+        parse_dates=True,
+        squeeze=True)
+    return power_price.resample(time_unit, how='mean')
 
 
 
@@ -39,9 +45,8 @@ _DEFAULT_PARAMETERS = {
     't0': pd.Timestamp('2013-01-01'),
     'time_unit' : pd.Timedelta('12h'), # Time unit
     'step' : pd.Timedelta('12h'), # Time span to lock in each step
-    'horizon' : pd.Timedelta('72h'), # Planning horizon
+    'horizon' : pd.Timedelta('12h'), # Planning horizon
     'prices': {
-        Resources.power: power_price, # SEK/MWh
         Resources.heating_oil: 500, # SEK/MWh (LHV)
         Resources.bio_oil: 500, # SEK/MWh (LHV)
         Resources.natural_gas: 280, # SEK/MWh (LHV)
@@ -62,6 +67,7 @@ def get_parameters(**kwargs):
 
 def make_model(parameters, seed=None):
     uncertain = DummyRandomizer() if seed is None else Randomizer(seed)
+    parameters['prices'][Resources.power] = get_power_price(parameters['time_unit'])
 
     model = fs.models.MyopicDispatchModel(
         t0=parameters['t0'],
@@ -73,14 +79,14 @@ def make_model(parameters, seed=None):
     def step_time(t, step):
         return t + step * parameters['time_unit']
 
-    for p in parts | {model}:
-        p.step_time = step_time
-
     # No explicit distribution channels in this model. Just create a cluster for each resource.
     for r in Resources:
-        cluster = fs.Cluster(resource=r)
+        cluster = fs.Cluster(resource=r, name='{} cluster'.format(r))
         cluster.add_parts(*(p for p in parts if r in p.resources))
         model.add_part(cluster)
+
+    for p in model.parts('inf') | {model}:
+        p.step_time = step_time
 
     return model
 
@@ -88,11 +94,17 @@ def make_model(parameters, seed=None):
 def make_parts(parameters, uncertain):
     parts = set()
 
+    heat_history = get_heat_history(parameters['time_unit'])
+    power_demand = get_power_demand(parameters['time_unit'])
     taxation = make_tax_function(parameters)
 
     for r in Resources:
         if r is not Resources.heat:
-            parts.add(Import(resource=r, price=parameters['prices'][r]))
+            parts.add(
+                Import(
+                    resource=r,
+                    price=parameters['prices'][r],
+                    name='Import({})'.format(r)))
 
     # Conversion factor from hour to model time unit:
     # "hour" is the number of model time steps per hour.
@@ -107,11 +119,13 @@ def make_parts(parameters, uncertain):
     city.consumption[Resources.heat] = series_reader(heat_history.sum(axis=1))
     city.consumption[Resources.power] = series_reader(power_demand)
     city.cost = lambda t: 0
+    city.state_variables = lambda t: ()
     parts.add(city)
 
     solid_waste_incineration = fs.Node(name='Renova CHP')
     solid_waste_incineration.production[Resources.heat] = series_reader(heat_history['Renova CHP'])
     solid_waste_incineration.cost = lambda t: 0
+    solid_waste_incineration.state_variables = lambda t: ()
     parts.add(solid_waste_incineration)
 
     parts.add(
@@ -325,6 +339,13 @@ class DummyRandomizer(object):
 if __name__ == '__main__':
     parameters = get_parameters()
     m = make_model(parameters, seed=1)
-    m.constraints(parameters['t0'])
     m.solver = fs.get_solver()
     m.advance()
+    for p in m.parts('inf'):
+        logger.info(p)
+        for r in p.resources:
+            for k in ('production', 'consumption', 'accumulation'):
+                t_m_1 = p.step_time(m.t, -1)
+                attr = getattr(p, k)
+                if r in attr:
+                    logger.info('\t{}[{}] ({}): {}'.format(k, r, t_m_1, float(attr[r](t_m_1))))

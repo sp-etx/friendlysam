@@ -29,7 +29,7 @@ class Boiler(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            F = VariableCollection(lb=0, ub=Fmax)
+            F = VariableCollection(lb=0, ub=Fmax, name='F')
         self.consumption[fuel] = F
         self.production[Resources.heat] = lambda t: eta * F(t)
 
@@ -54,7 +54,7 @@ class LinearCHP(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            F = VariableCollection(lb=0, ub=Fmax)
+            F = VariableCollection(lb=0, ub=Fmax, name='F')
 
         self.consumption[fuel] = F
         self.production[Resources.heat] = lambda t: F(t) * eta / (alpha + 1)
@@ -75,7 +75,7 @@ class LinearSlowCHP(fs.Node):
         with fs.namespace(self):
             modes = OrderedDict(
                 (n, VariableCollection(name=n, domain=fs.Domain.binary)) for n in mode_names)
-            F_on = VariableCollection(lb=0) # Fuel use if on
+            F_on = VariableCollection(lb=0, name='F_on') # Fuel use if on
 
         self.consumption[fuel] = lambda t: F_on(t) + modes['starting'](t) * Fmin
         self.production[Resources.heat] = lambda t: F_on(t) * eta / (alpha + 1)
@@ -100,7 +100,7 @@ class LinearSlowCHP(fs.Node):
 
         self.constraints += mode_constraints
 
-        self.state_variables = lambda t: {F_on(t)} | {var(t) for var in self.modes.values()}
+        self.state_variables = lambda t: {F_on(t)} | {var(t) for var in modes.values()}
 
 
 class HeatPump(fs.Node):
@@ -110,7 +110,7 @@ class HeatPump(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            Q = VariableCollection(lb=0, ub=Qmax)
+            Q = VariableCollection(lb=0, ub=Qmax, name='Q')
         self.production[Resources.heat] = Q
         self.consumption[Resources.power] = lambda t: Q(t) / COP
 
@@ -127,7 +127,7 @@ class Import(fs.Node):
         super().__init__(**kwargs)
 
         with fs.namespace(self):
-            quantity = VariableCollection(lb=0, ub=capacity)
+            quantity = VariableCollection(lb=0, ub=capacity, name='import')
 
         self.production[resource] = quantity
 
