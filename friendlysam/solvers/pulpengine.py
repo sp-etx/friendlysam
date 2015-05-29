@@ -78,8 +78,15 @@ class PulpSolver(object):
 
         for i, c in enumerate(problem.constraints):
             if isinstance(c, fs.Constraint):
-                model += c.expr.evaluate(replacements=pulp_vars)
-                
+                try:
+                    model += c.expr.evaluate(replacements=pulp_vars)
+                except Exception:
+                    if isinstance(expr, (fs.Greater, fs.Less)):
+                        msg = 'Strict inequalities are not supported by this solver: {}'.format(
+                            c)
+                        raise SolverError(msg) from e
+                    raise
+
             elif isinstance(c, (fs.SOS1, fs.SOS2)):
                 if isinstance(c, fs.SOS1):
                     sosdict = model.sos1
@@ -103,7 +110,7 @@ class PulpSolver(object):
             except Exception as e:
                 exceptions.append({'solver': solver_func, 'exception': str(e)})
         else:
-            raise RuntimeError('None of the solvers worked. More info: {}'.format(exceptions))
+            raise SolverError('None of the solvers worked. More info: {}'.format(exceptions))
         
         if not status == LpStatusOptimal:
             raise fs.SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))

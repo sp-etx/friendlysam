@@ -37,6 +37,7 @@ def get_solver(**kwargs):
 
 class SolverError(Exception): pass
         
+class NoValueError(AttributeError): pass
 
 class Domain(Enum):
     """docstring for Domain"""
@@ -46,7 +47,8 @@ class Domain(Enum):
 
 DEFAULT_DOMAIN = Domain.real
 
-def _evaluate_or_not(obj, replacements):
+
+def _try_evaluate(obj, replacements):
     return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
 
 class _Operation(object):
@@ -63,11 +65,15 @@ class _Operation(object):
 
 
     def evaluate(self, replacements):
-        return self._evaluate(*(_evaluate_or_not(a, replacements) for a in self._args))
+        return self._evaluate(*(_try_evaluate(a, replacements) for a in self._args))
 
     @property
     def value(self):
-        return float(self.evaluate({}))
+        evaluated = self.evaluate({})
+        if isinstance(evaluated, numbers.Number):
+            return evaluated
+        msg = '{} evaluates to {} which is not a number'.format(self, evaluated)
+        raise NoValueError(msg)
 
     @property
     def variables(self):
@@ -98,17 +104,29 @@ class _Operation(object):
     def __repr__(self):
         return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
 
+    def __float__(self):
+        return float(self.value)
+
+    def __int__(self):
+        return int(self.value)
+
 class Relation(_Operation):
 
     _priority = 0
 
     def __bool__(self):
-        raise RuntimeError("{} is a Relation and its truthyness should not be tested".format(self))
+        raise TypeError("{} is a Relation and its truthyness should not be tested".format(self))
 
 
     @property
     def expr(self):
         return self
+
+class Less(Relation):
+    _format = '{} < {}'
+
+    def _evaluate(self, a, b):
+        return a < b
 
 class LessEqual(Relation):
     _format = '{} <= {}'
@@ -121,6 +139,12 @@ class GreaterEqual(Relation):
 
     def _evaluate(self, a, b):
         return a >= b
+
+class Greater(Relation):
+    _format = '{} > {}'
+
+    def _evaluate(self, a, b):
+        return a > b
 
 class Equals(Relation):
     _format = '{} == {}'
@@ -164,6 +188,12 @@ class _MathEnabled(object):
 
     def __ge__(self, other):
         return GreaterEqual(self, other)
+
+    def __lt__(self, other):
+        return Less(self, other)
+
+    def __gt__(self, other):
+        return Greater(self, other)
 
     def __eq__(self, other):
         return Equals(self, other)
@@ -228,7 +258,11 @@ class Variable(_MathEnabled):
 
 
     def take_value(self, solution):
-        self.value = solution[self]
+        try:
+            self.value = solution[self]
+        except KeyError as e:
+            raise KeyError('variable {} is not in the solution'.format(repr(self))) from e
+
 
 
     def __str__(self):
@@ -237,6 +271,32 @@ class Variable(_MathEnabled):
 
     def __repr__(self):
         return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+
+
+    @property
+    def value(self):
+        try:
+            return self._value
+        except AttributeError as e:
+            msg = '{} has no value'.format(repr(self))
+            raise NoValueError(msg) from e
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+
+    @value.deleter
+    def value(self):
+        del self._value
+    
+
+
+    def __float__(self):
+        return float(self.value)
+
+
+    def __int__(self):
+        return int(self.value)
 
 
 class VariableCollection(object):
@@ -286,7 +346,7 @@ class _ConstraintBase(object):
 
     @property
     def variables(self):
-        raise NotImplementedError()
+        raise NotImplementedError('this is a responsibility of subclasses')
 
 
 class Constraint(_ConstraintBase):
@@ -395,7 +455,7 @@ class Problem(object):
         if isinstance(constraint, Relation):
             constraint = Constraint(constraint, 'Ad hoc constraint')
         if not isinstance(constraint, (Constraint, _SOS)):
-            raise ValueError('{} is not a valid constraint'.format(constraint))
+            raise ConstraintError('{} is not a valid constraint'.format(constraint))
         self._constraints.add(constraint)
 
     def add(self, constraints):

@@ -24,7 +24,11 @@ class MyopicDispatchModel(fs.Part):
 
     def advance(self):
         if self.horizon < self.step:
-            raise RuntimeError()
+            msg = '{}: horizon {} is smaller than step size {}'.format(
+                repr(self),
+                self.horizon,
+                self.step)
+            raise fs.InsanityError()
 
         opt_times = self.times(self.t, self.horizon)
 

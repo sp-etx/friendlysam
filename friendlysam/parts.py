@@ -66,7 +66,7 @@ class ConstraintCollection(object):
 
     def _add_constraint_func(self, func):
         if not callable(func):
-            raise RuntimeError('constraint funcs must be callable but {} is not'.format(func))
+            raise ValueError('constraint funcs must be callable but {} is not'.format(func))
         self._constraint_funcs.add(func)
 
     def add(self, addition):
@@ -116,6 +116,11 @@ class Part(object):
         if value is not self._constraints:
             raise AttributeError('you are not allowed to change this one')
 
+    def __repr__(self):
+        if self.name:
+            return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+        else:
+            return '<{} at {} (unnamed)>'.format(self.__class__.__name__, hex(id(self)))
 
     def __str__(self):
         return self.name
@@ -125,10 +130,10 @@ class Part(object):
         if len(matches) == 1:
             return matches[0]
         elif len(matches) == 0:
-            raise KeyError("'{}' has no part '{}'".format(self, name))
+            raise ValueError("'{}' has no part '{}'".format(repr(self), name))
         elif len(matches) > 1:
-            raise KeyError(
-                "'{}' has more than one part '{}'".format(self, name))
+            raise ValueError(
+                "'{}' has more than one part '{}'".format(repr(self), name))
 
 
     def parts(self, depth='inf'):
@@ -158,6 +163,11 @@ class Part(object):
     def add_parts(self, *parts):
         for p in parts:
             self.add_part(p)
+
+
+    def state_variables(self, *indices):
+        msg = "{} has not defined state_variables".format(repr(self))
+        raise AttributeError(msg).with_traceback(sys.exc_info()[2])
 
 class Node(Part):
     """docstring for Node"""
@@ -278,7 +288,7 @@ class Cluster(Node):
                                 self._resource,
                                 repr(func))
 
-                            raise TypeError(msg).with_traceback(sys.exc_info()[2])
+                            raise TypeError(msg) from e
 
             return sum(terms)
 
@@ -297,7 +307,7 @@ class Cluster(Node):
                 part.set_cluster(self) # May raise an exception.
             except InsanityError as e:
                 super().remove_part(part) # Roll back on exception.
-                raise e
+                raise
 
 
     def remove_part(self, part):
