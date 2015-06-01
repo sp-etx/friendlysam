@@ -2,7 +2,7 @@
 
 from nose.tools import raises, assert_raises
 
-from itertools import chain
+from itertools import chain, product
 import friendlysam as fs
 from friendlysam import Node, Cluster
 
@@ -21,7 +21,7 @@ def test_cluster():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob.add(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(part.constraints(t) for part, t in product(cl.descendants_and_self, times))))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
@@ -59,10 +59,10 @@ def test_cluster_add_remove():
     c = Cluster(resource=RESOURCE)
 
     def not_added():
-        return c.parts() == set() and n.cluster(RESOURCE) is None
+        return c.children == set() and n.cluster(RESOURCE) is None
 
     def added():
-        return c.parts() == {n} and n.cluster(RESOURCE) is c
+        return c.children == {n} and n.cluster(RESOURCE) is c
 
     assert not_added()
     c.add_part(n)

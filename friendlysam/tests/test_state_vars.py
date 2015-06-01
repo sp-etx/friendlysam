@@ -22,13 +22,13 @@ def test_state_vars():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob.add(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(part.constraints(t) for part, t in product(cl.descendants_and_self, times))))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 
-    for t, part in product(times, cl.parts()):
+    for t, part in product(times, cl.children):
         for v in part.state_variables(t):
             v.take_value(solution)
 

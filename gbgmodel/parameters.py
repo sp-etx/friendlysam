@@ -85,7 +85,7 @@ def make_model(parameters, seed=None):
         cluster.add_parts(*(p for p in parts if r in p.resources))
         model.add_part(cluster)
 
-    for p in model.parts('inf') | {model}:
+    for p in model.descendants_and_self:
         p.step_time = step_time
 
     return model
@@ -341,7 +341,7 @@ if __name__ == '__main__':
     m = make_model(parameters, seed=1)
     m.solver = fs.get_solver()
     m.advance()
-    for p in m.parts('inf'):
+    for p in m.descendants:
         logger.info(p)
         for r in p.resources:
             for k in ('production', 'consumption', 'accumulation'):

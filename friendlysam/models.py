@@ -32,7 +32,7 @@ class MyopicDispatchModel(fs.Part):
 
         opt_times = self.times(self.t, self.horizon)
 
-        parts = self.parts() | {self}
+        parts = self.descendants_and_self
 
         problem = fs.Problem()
         problem.objective = fs.Minimize(sum(p.cost(t) for p, t in product(parts, opt_times)))

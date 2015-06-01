@@ -58,11 +58,7 @@ class ConstraintCollection(object):
             func_desc = self._func_description(func, *indices)
             constraints.update(self._prepare(item, func_desc) for item in func_output)
 
-        # Subtract 1 from depth. This means we get only this part's constraints
-        # if depth=0, etc. It is probably the expected behavior.
-        depth = float(depth) - 1
-        subparts = self._owner.parts(depth=depth)
-        return constraints.union(*[p.constraints(*indices, depth=0) for p in subparts])
+        return constraints
 
     def _add_constraint_func(self, func):
         if not callable(func):
@@ -127,7 +123,7 @@ class Part(object):
 
 
     def find(self, name):
-        matches = [part for part in self.parts() if part.name == name]
+        matches = [part for part in self.descendants_and_self if part.name == name]
         if len(matches) == 1:
             return matches[0]
         elif len(matches) == 0:
@@ -137,18 +133,39 @@ class Part(object):
                 "'{}' has more than one part '{}'".format(repr(self), name))
 
 
-    def parts(self, depth='inf'):
+    def parts(self, depth='inf', include_self=True):
         parts = set()
         depth = float(depth)
-        if depth >= 0:
+
+        if depth >= 1:
             parts.update(self._parts)
 
-        all_parts = parts.union(*(subpart.parts(depth - 1) for subpart in parts))
+        parts.update(*(subpart.parts(depth=depth - 1, include_self=False) for subpart in parts))
 
-        return all_parts
+        if include_self:
+            parts.add(self)
+
+        return parts
+
+    @property    
+    def children(self):
+        return self.parts(depth=1, include_self=False)
+
+    @property
+    def children_and_self(self):
+        return self.parts(depth=1, include_self=True)
+
+    @property
+    def descendants(self):
+        return self.parts(depth='inf', include_self=False)
+
+    @property
+    def descendants_and_self(self):
+        return self.parts(depth='inf', include_self=True)
+
 
     def add_part(self, p):
-        if self in p.parts('inf'):
+        if self in p.descendants_and_self:
             raise InsanityError(
                 ('cannot add {} to {} because it would '
                 'generate a cyclic relationship').format(p, self))
@@ -206,7 +223,7 @@ class Node(Part):
         else:
             self._clusters[res] = cluster
 
-        if not self in cluster.parts(0):
+        if not self in cluster.children:
             cluster.add_part(self)
 
 
@@ -215,7 +232,7 @@ class Node(Part):
         if not (res in self._clusters and self._clusters[res] is cluster):
             raise InsanityError('cannot unset Cluster {} because it is not set'.format(cluster))        
         del self._clusters[res]
-        if self in cluster.parts(0):
+        if self in cluster.children:
             cluster.remove_part(self)
 
 
@@ -272,7 +289,7 @@ class Cluster(Node):
         # attr_name is the attribute to aggregate, like "production", "consumption", or "accumulation"
         def aggregation(*indices):
             terms = []
-            for part in self.parts(0):
+            for part in self.children:
                 func_dict = getattr(part, attr_name)
                 if self._resource in func_dict:
                     func = func_dict[self._resource]

@@ -2,7 +2,7 @@
 
 from nose.tools import raises, assert_raises
 
-from itertools import chain
+from itertools import chain, product
 import friendlysam as fs
 from friendlysam import Node, Cluster, Constraint, namespace
 
@@ -46,7 +46,7 @@ def check_variant(variant):
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob.add(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(part.constraints(t) for part, t in product(cl.descendants_and_self, times))))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 

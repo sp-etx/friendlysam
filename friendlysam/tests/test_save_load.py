@@ -5,7 +5,7 @@ import os
 from nose.tools import raises, assert_raises
 
 import dill
-from itertools import chain
+from itertools import chain, product
 import friendlysam as fs
 
 from friendlysam.tests import default_solver, approx
@@ -17,7 +17,7 @@ def run_model(p, c, cl, times):
     times = tuple(times)
 
     prob = fs.Problem()
-    prob.add(chain(*(cl.constraints(t) for t in times)))
+    prob.add(chain(*(part.constraints(t) for part, t in product(cl.descendants_and_self, times))))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
