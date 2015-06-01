@@ -14,7 +14,7 @@ class MyopicDispatchModel(fs.Part):
         super().__init__(name=name)
         self.horizon = horizon
         self.step = step
-        self.t = t0
+        self.time = t0
     
     def state_variables(self, t):
         return tuple()
@@ -30,7 +30,7 @@ class MyopicDispatchModel(fs.Part):
                 self.step)
             raise fs.InsanityError()
 
-        opt_times = self.times(self.t, self.horizon)
+        opt_times = self.times(self.time, self.horizon)
 
         parts = self.descendants_and_self
 
@@ -40,8 +40,8 @@ class MyopicDispatchModel(fs.Part):
 
         solution = self.solver.solve(problem)
 
-        for p, t in product(parts, self.iter_times(self.t, self.step)):
+        for p, t in product(parts, self.iter_times(self.time, self.step)):
             for v in p.state_variables(t):
                 v.take_value(solution)
 
-        self.t = self.step_time(t, self.step)
+        self.time = self.step_time(t, self.step)
