@@ -21,7 +21,7 @@ def test_cluster():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob.add(chain(*(part.constraints(t) for part, t in product(cl.descendants_and_self, times))))
+    prob += (part.constraints(t) for part, t in product(cl.descendants_and_self, times))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 

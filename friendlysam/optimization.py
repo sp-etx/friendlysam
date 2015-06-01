@@ -458,15 +458,21 @@ class Problem(object):
             raise ConstraintError('{} is not a valid constraint'.format(constraint))
         self._constraints.add(constraint)
 
-    def add(self, constraints):
+    def add(self, *additions):
+        for constraint in additions:
+            try:
+                for constraint in constraint:
+                    self._add_constraint(constraint)
+            except TypeError:
+                self._add_constraint(constraint)
+
+    def __iadd__(self, addition):
         try:
-            constraints = iter(constraints)
-        except TypeError: # not iterable
-            constraints = (constraints,)
-    
-        for c in constraints:
-            self._add_constraint(c)
-    
+            addition = iter(addition)
+        except TypeError:
+            addition = (addition,)
+        self.add(*addition)
+        return self
 
     @property
     def variables(self):
