@@ -20,7 +20,7 @@ def test_simple_SOS1():
     weights[index] = 0.5
     prob = fs.Problem()
     prob.add(fs.SOS1(vs))
-    prob.add(Constraint(sum(vs) == sum_val))
+    prob.add(Constraint(fs.Equals(sum(vs), sum_val)))
     #prob.constraints.update(Constraint(v >= 0) for v in vs)
     prob.objective = fs.Minimize(sum(v * w for v, w in zip(vs, weights)))
 

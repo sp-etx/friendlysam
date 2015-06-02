@@ -210,11 +210,6 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Greater(self, other)
 
-    def __eq__(self, other):
-        return Equals(self, other)
-
-    def __hash__(self):
-        return id(self)
 
 
 class Sum(_Operation, _MathEnabled):
@@ -436,7 +431,7 @@ class Minimize(_Objective):
     pass
 
 def dot(a, b):
-    return fs.Sum(ai * bi for ai, bi in zip(a, b))
+    return Sum(ai * bi for ai, bi in zip(a, b))
 
 def piecewise_affine(points, name=None):
     points = dict(points).items()
@@ -454,7 +449,7 @@ def piecewise_affine_constraints(variables, include_lb=True):
     return set.union(
         {
             SOS2(variables, desc='Picewise affine'),
-            Constraint(fs.Equals(fs.Sum(variables), 1), desc='Piecewise affine sum')
+            Constraint(Equals(Sum(variables), 1), desc='Piecewise affine sum')
         },
         {
             Constraint(v >= 0, 'Piecewise affine weight') for v in variables
