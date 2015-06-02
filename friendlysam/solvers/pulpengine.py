@@ -10,6 +10,7 @@ from itertools import chain
 from pulp import *
 
 import friendlysam as fs
+from friendlysam import SolverError
 
 
 def _cbc_solve(problem):
@@ -65,6 +66,10 @@ class PulpSolver(object):
 
         return LpVariable(name, **options)
 
+    _evals = {
+        fs.Sum: lambda *x: pulp.lpSum(x)
+    }
+
     def solve(self, problem):
         pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables}
 
@@ -74,12 +79,12 @@ class PulpSolver(object):
             sense = LpMaximize
         model = LpProblem('friendlysam', sense)
         
-        model += problem.objective.expr.evaluate(replacements=pulp_vars)
+        model += problem.objective.expr.evaluate(replacements=pulp_vars, evaluators=self._evals)
 
         for i, c in enumerate(problem.constraints):
             if isinstance(c, fs.Constraint):
                 try:
-                    model += c.expr.evaluate(replacements=pulp_vars)
+                    model += c.expr.evaluate(replacements=pulp_vars, evaluators=self._evals)
                 except Exception:
                     if isinstance(expr, (fs.Greater, fs.Less)):
                         msg = 'Strict inequalities are not supported by this solver: {}'.format(

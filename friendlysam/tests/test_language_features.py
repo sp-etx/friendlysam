@@ -37,7 +37,7 @@ class Consumer(Node):
         return self.consumption[RESOURCE](t) == self._cons_func(t)
 
 
-def check_variant(variant):
+def check_variant(variant, sum_func=sum):
     times = list(range(5))
     consumption = lambda t: t * 1.5
 
@@ -48,7 +48,7 @@ def check_variant(variant):
     prob = fs.Problem()
     prob += (part.constraints(t) for part, t in product(cl.descendants_and_self, times))
 
-    prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
+    prob.objective = fs.Minimize(sum_func(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 
@@ -69,6 +69,7 @@ def non_callable_constraint():
 def test_variants():
     for variant in range(5):
         yield check_variant, variant
+        yield check_variant, variant, fs.Sum
 
 
 if __name__ == '__main__':

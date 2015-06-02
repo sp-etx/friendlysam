@@ -9,7 +9,7 @@ from friendlysam import Storage, FlowNetwork
 
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 from friendlysam.tests import default_solver, approx
-from friendlysam.optimization import Problem, Minimize
+from friendlysam.optimization import Problem, Minimize, Sum
 
 def test_basic_functionality():
     times = range(1,4)
@@ -28,7 +28,7 @@ def test_basic_functionality():
     prob = Problem()
     prob += (part.constraints(t) for part, t in product(rn.descendants_and_self, times))
 
-    prob.objective = Minimize(sum(p.cost(t) for t in times))
+    prob.objective = Minimize(Sum(p.cost(t) for t in times))
 
     solution = default_solver.solve(prob)
 

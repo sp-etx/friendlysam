@@ -44,8 +44,6 @@ class ConstraintCollection(object):
             return '{}{}'.format(func_desc, indices)
 
     def __call__(self, *indices, **kwargs):
-        depth = kwargs.get('depth', 'inf')
-
         constraints = set()
 
         for func in self._constraint_funcs:
@@ -241,8 +239,8 @@ class Node(Part):
 
 
     def _balance_constraint(self, resource, *indices):
-        inflow = sum(flow(*indices) for flow in self._inflows)
-        outflow = sum(flow(*indices) for flow in self._outflows)
+        inflow = fs.Sum(flow(*indices) for flow in self._inflows)
+        outflow = fs.Sum(flow(*indices) for flow in self._outflows)
 
         lhs = inflow
         rhs = outflow
@@ -308,7 +306,7 @@ class Cluster(Node):
 
                             raise TypeError(msg) from e
 
-            return sum(terms)
+            return fs.Sum(terms)
 
         return aggregation
 

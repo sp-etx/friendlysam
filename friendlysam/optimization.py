@@ -3,6 +3,8 @@
 import logging
 logger = logging.getLogger(__name__)
 import sys
+import operator
+from functools import reduce
 
 from contextlib import contextmanager
 from itertools import chain
@@ -48,9 +50,6 @@ class Domain(Enum):
 DEFAULT_DOMAIN = Domain.real
 
 
-def _try_evaluate(obj, replacements):
-    return obj.evaluate(replacements) if hasattr(obj, 'evaluate') else obj
-
 class _Operation(object):
     """docstring for _Operation"""
     def __init__(self, *args):
@@ -61,11 +60,20 @@ class _Operation(object):
                     'Cannot apply {} on the VariableCollection {}. '
                     'Did you forget an index?').format(self.__class__, a)
                 raise ValueError(msg).with_traceback(sys.exc_info()[2])
-        self._args = tuple(args)
+        self._args = args
 
 
-    def evaluate(self, replacements):
-        return self._evaluate(*(_try_evaluate(a, replacements) for a in self._args))
+    def evaluate(self, replacements, evaluators=None):
+        if evaluators is None:
+            evaluators = {}
+        evaluated_args = []
+        for arg in self._args:
+            try:
+                evaluated_args.append(arg.evaluate(replacements, evaluators=evaluators))
+            except AttributeError:
+                evaluated_args.append(arg)
+        evaluator = evaluators.get(self.__class__, self._evaluate)
+        return evaluator(*evaluated_args)
 
     @property
     def value(self):
@@ -202,6 +210,23 @@ class _MathEnabled(object):
         return id(self)
 
 
+class Sum(_Operation, _MathEnabled):
+    """docstring for Sum"""
+    _priority = 1
+
+    def __init__(self, args):
+        # This quirk does two things:
+        # 1. It makes sure that the constructor only accepts one iterable argument
+        # 2. It exhausts the argument if it's a generator, and saves the generated values
+        self._args = tuple(args)
+
+    def _evaluate(self, *args):
+        return sum(args)
+
+    def __str__(self):
+        return 'Sum({})'.format(self._args)
+
+
 class Add(_Operation, _MathEnabled):
     """docstring for Add"""
     _format = '{} + {}'
@@ -249,12 +274,13 @@ class Variable(_MathEnabled):
         self.domain = domain
 
 
-    def evaluate(self, replacements=None):
-        with ignored(AttributeError):
+    def evaluate(self, replacements=None, evaluators=None):
+        try:
             return self.value
-        with ignored(AttributeError):
+        except AttributeError:
+            if replacements is None:
+                replacements = {}
             return replacements.get(self, self)
-        return self
 
 
     def take_value(self, solution):
@@ -271,24 +297,6 @@ class Variable(_MathEnabled):
 
     def __repr__(self):
         return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
-
-
-    @property
-    def value(self):
-        try:
-            return self._value
-        except AttributeError as e:
-            msg = '{} has no value'.format(repr(self))
-            raise NoValueError(msg) from e
-
-    @value.setter
-    def value(self, value):
-        self._value = value
-
-    @value.deleter
-    def value(self):
-        del self._value
-    
 
 
     def __float__(self):
@@ -419,7 +427,7 @@ class Minimize(_Objective):
     pass
 
 def dot(a, b):
-    return sum(ai * bi for ai, bi in zip(a, b))
+    return fs.Sum(ai * bi for ai, bi in zip(a, b))
 
 def piecewise_affine(points, name=None):
     points = dict(points).items()
@@ -437,7 +445,7 @@ def piecewise_affine_constraints(variables, include_lb=True):
     return set.union(
         {
             SOS2(variables, desc='Picewise affine'),
-            Constraint(sum(variables) == 1, desc='Piecewise affine sum')
+            Constraint(fs.Sum(variables) == 1, desc='Piecewise affine sum')
         },
         {
             Constraint(v >= 0, 'Piecewise affine weight') for v in variables

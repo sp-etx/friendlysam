@@ -86,10 +86,10 @@ class LinearSlowCHP(fs.Node):
         on_or_starting = lambda t: modes['on'](t) + modes['starting'](t)
         def mode_constraints(t):
             yield Constraint(
-                sum(m(t) for m in modes.values()) == 1, desc='Exactly one mode at a time')
+                fs.Sum(m(t) for m in modes.values()) == 1, desc='Exactly one mode at a time')
 
             if start_steps > 0:
-                recent_sum = sum(on_or_starting(tau) for tau in self.iter_times(t, -(start_steps+1), 0))
+                recent_sum = fs.Sum(on_or_starting(tau) for tau in self.iter_times(t, -(start_steps+1), 0))
                 yield Constraint(
                     modes['on'](t) <= recent_sum / start_steps,
                     desc="'on' mode is only allowed after start_steps in 'on' and 'starting'")
