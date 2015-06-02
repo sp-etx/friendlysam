@@ -52,6 +52,27 @@ DEFAULT_DOMAIN = Domain.real
 
 class _Operation(object):
     """docstring for _Operation"""
+
+    _object_cache = {}
+
+    def _prep_arg(a):
+        try:
+            return tuple(a)
+        except TypeError:
+            return a
+
+    # def __new__(cls, *args):
+    #     args = tuple(map(_Operation._prep_arg, args))
+    #     key = (cls,) + args
+    #     try:
+    #         return _Operation._object_cache[key]
+    #     except KeyError:
+    #         obj = object.__new__(cls)
+    #         _Operation._object_cache[key] = obj
+    #         obj._key = key
+    #         return obj
+
+
     def __init__(self, *args):
         super().__init__()
         for a in args:
@@ -210,7 +231,11 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Greater(self, other)
 
+class _ArgList(tuple):
+    """docstring for _ArgList"""
 
+    def evaluate(self, *args, **kwargs):
+        return _ArgList(a.evaluate(*args, **kwargs) for a in self)
 
 class Sum(_Operation, _MathEnabled):
     """docstring for Sum"""
@@ -220,12 +245,15 @@ class Sum(_Operation, _MathEnabled):
         # This quirk does two things:
         # 1. It makes sure that the constructor only accepts one iterable argument
         # 2. It exhausts the argument if it's a generator, and saves the generated values
-        args = tuple(args)
-        super().__init__(args)
-        self._args = args
+        args = _ArgList(args)
+        super().__init__(*args)
 
     def _evaluate(self, *args):
         return Sum(args)
+
+    @property
+    def value(self):
+        return sum(a.value for a in self._args)
 
     def __str__(self):
         return 'Sum({})'.format(self._args)
