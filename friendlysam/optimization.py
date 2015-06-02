@@ -67,7 +67,7 @@ class _Operation(object):
         return hash(self._key)
 
     def __eq__(self, other):
-        return self._key == other._key
+        return type(self) == type(other) and self._key == other._key
 
 
     def evaluate(self, replacements, evaluators=None):
