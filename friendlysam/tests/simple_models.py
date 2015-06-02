@@ -28,7 +28,7 @@ class Consumer(fs.Node):
             self.activity = VariableCollection('activity', lb=0)
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
-        self.constraints += lambda t: Constraint(cons(t) == consumption(t), 'Consumption constraint')
+        self.constraints += lambda t: Constraint(fs.Equals(cons(t), consumption(t)), 'Consumption constraint')
 
     def state_variables(self, t):
         return [self.activity(t)]

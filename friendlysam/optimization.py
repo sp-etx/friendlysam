@@ -61,6 +61,13 @@ class _Operation(object):
                     'Did you forget an index?').format(self.__class__, a)
                 raise ValueError(msg).with_traceback(sys.exc_info()[2])
         self._args = args
+        self._key = (type(self),) + args
+
+    def __hash__(self):
+        return hash(self._key)
+
+    def __eq__(self, other):
+        return self._key == other._key
 
 
     def evaluate(self, replacements, evaluators=None):
@@ -158,7 +165,7 @@ class Equals(Relation):
     _format = '{} == {}'
 
     def _evaluate(self, a, b):
-        return a == b
+        return Equals(a, b)
 
 def _is_zero(something):
     return isinstance(something, numbers.Number) and something == 0
@@ -218,10 +225,12 @@ class Sum(_Operation, _MathEnabled):
         # This quirk does two things:
         # 1. It makes sure that the constructor only accepts one iterable argument
         # 2. It exhausts the argument if it's a generator, and saves the generated values
-        self._args = tuple(args)
+        args = tuple(args)
+        super().__init__(args)
+        self._args = args
 
     def _evaluate(self, *args):
-        return sum(args)
+        return Sum(args)
 
     def __str__(self):
         return 'Sum({})'.format(self._args)
@@ -445,7 +454,7 @@ def piecewise_affine_constraints(variables, include_lb=True):
     return set.union(
         {
             SOS2(variables, desc='Picewise affine'),
-            Constraint(fs.Sum(variables) == 1, desc='Piecewise affine sum')
+            Constraint(fs.Equals(fs.Sum(variables), 1), desc='Piecewise affine sum')
         },
         {
             Constraint(v >= 0, 'Piecewise affine weight') for v in variables
