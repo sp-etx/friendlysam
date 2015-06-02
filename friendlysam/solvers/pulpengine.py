@@ -60,10 +60,8 @@ class PulpSolver(object):
 
         return LpVariable(name, **options)
 
-    _evals = {
-        fs.Sum: lambda *x: pulp.lpSum(x),
-        fs.Equals: lambda x, y: x == y
-    }
+    _evaluators = fs.get_concrete_evaluators()
+    _evaluators[fs.Sum] = lambda *x: pulp.lpSum(x)
 
     def solve(self, problem):
         vc = self._var_cache
@@ -85,7 +83,7 @@ class PulpSolver(object):
                 expressions[expr] = ec[expr]
                 self.reu += 1
             except KeyError:
-                expressions[expr] = expr.evaluate(replacements=pulp_vars, evaluators=self._evals)
+                expressions[expr] = expr.evaluate(replace=pulp_vars, evaluators=self._evaluators)
             return expressions[expr]
         #pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables}
         self._var_cache = pulp_vars

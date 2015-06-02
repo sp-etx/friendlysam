@@ -49,40 +49,29 @@ class Domain(Enum):
 
 DEFAULT_DOMAIN = Domain.real
 
+def get_concrete_evaluators():
+    return _CONCRETE_EVALUATORS.copy()
 
 class _Operation(object):
     """docstring for _Operation"""
 
     _object_cache = {}
 
-    def _prep_arg(a):
+    @classmethod
+    def create(cls, *args):
+        key = (cls,) + args
         try:
-            return tuple(a)
-        except TypeError:
-            return a
-
-    # def __new__(cls, *args):
-    #     args = tuple(map(_Operation._prep_arg, args))
-    #     key = (cls,) + args
-    #     try:
-    #         return _Operation._object_cache[key]
-    #     except KeyError:
-    #         obj = object.__new__(cls)
-    #         _Operation._object_cache[key] = obj
-    #         obj._key = key
-    #         return obj
+            return _Operation._object_cache[key]
+        except KeyError:
+            obj = object.__new__(cls)
+            _Operation._object_cache[key] = obj
+            obj._key = key
+            obj._args = args
+            return obj
 
 
-    def __init__(self, *args):
-        super().__init__()
-        for a in args:
-            if isinstance(a, VariableCollection):
-                msg = (
-                    'Cannot apply {} on the VariableCollection {}. '
-                    'Did you forget an index?').format(self.__class__, a)
-                raise ValueError(msg).with_traceback(sys.exc_info()[2])
-        self._args = args
-        self._key = (type(self),) + args
+    def __new__(cls, *args):
+        return cls.create(*args)
 
     def __hash__(self):
         return hash(self._key)
@@ -90,22 +79,27 @@ class _Operation(object):
     def __eq__(self, other):
         return type(self) == type(other) and self._key == other._key
 
-
-    def evaluate(self, replacements, evaluators=None):
+    @property
+    def args(self):
+        return self._args
+    
+    def evaluate(self, replace=None, evaluators=None):
         if evaluators is None:
             evaluators = {}
+        if replace is None:
+            replace = {}
         evaluated_args = []
-        for arg in self._args:
+        for arg in self.args:
             try:
-                evaluated_args.append(arg.evaluate(replacements, evaluators=evaluators))
+                evaluated_args.append(arg.evaluate(replace=replace, evaluators=evaluators))
             except AttributeError:
                 evaluated_args.append(arg)
-        evaluator = evaluators.get(self.__class__, self._evaluate)
+        evaluator = evaluators.get(self.__class__, self.__class__.create)
         return evaluator(*evaluated_args)
 
     @property
     def value(self):
-        evaluated = self.evaluate({})
+        evaluated = self.evaluate(evaluators=_CONCRETE_EVALUATORS)
         if isinstance(evaluated, numbers.Number):
             return evaluated
         msg = '{} evaluates to {} which is not a number'.format(self, evaluated)
@@ -161,32 +155,17 @@ class Relation(_Operation):
 class Less(Relation):
     _format = '{} < {}'
 
-    def _evaluate(self, a, b):
-        return a < b
-
 class LessEqual(Relation):
     _format = '{} <= {}'
-
-    def _evaluate(self, a, b):
-        return a <= b
 
 class GreaterEqual(Relation):
     _format = '{} >= {}'
 
-    def _evaluate(self, a, b):
-        return a >= b
-
 class Greater(Relation):
     _format = '{} > {}'
 
-    def _evaluate(self, a, b):
-        return a > b
-
 class Equals(Relation):
     _format = '{} == {}'
-
-    def _evaluate(self, a, b):
-        return Equals(a, b)
 
 def _is_zero(something):
     return isinstance(something, numbers.Number) and something == 0
@@ -231,32 +210,20 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Greater(self, other)
 
-class _ArgList(tuple):
-    """docstring for _ArgList"""
-
-    def evaluate(self, *args, **kwargs):
-        return _ArgList(a.evaluate(*args, **kwargs) for a in self)
-
 class Sum(_Operation, _MathEnabled):
     """docstring for Sum"""
     _priority = 1
 
-    def __init__(self, args):
-        # This quirk does two things:
-        # 1. It makes sure that the constructor only accepts one iterable argument
-        # 2. It exhausts the argument if it's a generator, and saves the generated values
-        args = _ArgList(args)
-        super().__init__(*args)
-
-    def _evaluate(self, *args):
-        return Sum(args)
+    def __new__(cls, vector):
+        vector = tuple(vector)
+        return cls.create(*vector)
 
     @property
     def value(self):
-        return sum(a.value for a in self._args)
+        return sum(a.value for a in self.args)
 
     def __str__(self):
-        return 'Sum({})'.format(self._args)
+        return 'Sum{}'.format(self.args)
 
 
 class Add(_Operation, _MathEnabled):
@@ -264,17 +231,11 @@ class Add(_Operation, _MathEnabled):
     _format = '{} + {}'
     _priority = 1
 
-    def _evaluate(self, a, b):
-        return a + b
-
 
 class Sub(_Operation, _MathEnabled):
     """docstring for Sub"""
     _format = '{} - {}'
     _priority = 1
-
-    def _evaluate(self, a, b):
-        return a - b
         
     
 class Mul(_Operation, _MathEnabled):
@@ -282,9 +243,6 @@ class Mul(_Operation, _MathEnabled):
     
     _format = '{} * {}'
     _priority = 2
-
-    def _evaluate(self, a, b):
-        return a * b
 
 
 class Variable(_MathEnabled):
@@ -306,13 +264,13 @@ class Variable(_MathEnabled):
         self.domain = domain
 
 
-    def evaluate(self, replacements=None, evaluators=None):
+    def evaluate(self, replace=None, evaluators=None):
         try:
             return self.value
         except AttributeError:
-            if replacements is None:
-                replacements = {}
-            return replacements.get(self, self)
+            if replace is None:
+                replace = {}
+            return replace.get(self, self)
 
 
     def take_value(self, solution):
@@ -526,3 +484,13 @@ class Problem(object):
     def solve(self):
         """Try to solve the optimization problem"""
         raise NotImplementedError()
+
+_CONCRETE_EVALUATORS = {
+    Equals: operator.eq,
+    LessEqual: operator.le,
+    GreaterEqual: operator.ge,
+    Add: operator.add,
+    Sub: operator.sub,
+    Mul: operator.mul,
+    Sum: lambda *x: sum(x)
+}
