@@ -45,16 +45,6 @@ class PulpSolver(object):
         super().__init__()
         self.options = DEFAULT_OPTIONS.copy()
         self.options.update(kwargs)
-        self._names = set()
-
-    def _get_unique_name(self, name=None):
-        _counter = 0
-        while _counter == 0 or name in self._names:
-            _counter += 1
-            name = 'x{}'.format(_counter)
-
-        self._names.add(name)
-        return name
 
     def _make_pulp_var(self, variable):
         options = dict(
@@ -62,7 +52,8 @@ class PulpSolver(object):
             upBound=variable.ub,
             cat=_domain_mapping[variable.domain])
 
-        name = self._get_unique_name(variable.name)
+        name = 'x{}'.format(self._var_counter)
+        self._var_counter += 1
 
         return LpVariable(name, **options)
 
@@ -71,6 +62,7 @@ class PulpSolver(object):
     }
 
     def solve(self, problem):
+        self._var_counter = 0
         pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables}
 
         if isinstance(problem.objective, fs.Minimize):
