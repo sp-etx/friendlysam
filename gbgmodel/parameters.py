@@ -14,6 +14,7 @@ from partlib import Resources, HeatPump, Import, LinearCHP, LinearSlowCHP, Boile
 data_dir = 'data'
 
 def get_heat_history(time_unit):
+    return
     heat_history = pd.read_csv(
         'data/heat_history.csv',
         encoding='utf-8',
@@ -22,6 +23,7 @@ def get_heat_history(time_unit):
     return heat_history.resample(time_unit, how='sum')
 
 def get_power_demand(time_unit):
+    return
     power_demand = pd.read_csv(
         'data/power_demand.csv',
         encoding='utf-8',
@@ -31,6 +33,7 @@ def get_power_demand(time_unit):
     return power_demand.resample(time_unit, how='sum')
 
 def get_power_price(time_unit):
+    return
     power_price = pd.read_csv(
         'data/power_price.csv',
         encoding='utf-8',
@@ -67,7 +70,7 @@ def get_parameters(**kwargs):
 
 def make_model(parameters, seed=None):
     uncertain = DummyRandomizer() if seed is None else Randomizer(seed)
-    parameters['prices'][Resources.power] = get_power_price(parameters['time_unit'])
+    parameters['prices'][Resources.power] = 100#get_power_price(parameters['time_unit'])
 
     model = fs.models.MyopicDispatchModel(
         t0=parameters['t0'],
@@ -116,14 +119,14 @@ def make_parts(parameters, uncertain):
 
     series_reader = lambda series: series.loc.__getitem__
     city = fs.Node(name='City')
-    city.consumption[Resources.heat] = series_reader(heat_history.sum(axis=1))
-    city.consumption[Resources.power] = series_reader(power_demand)
+    city.consumption[Resources.heat] = lambda t: 100#series_reader(heat_history.sum(axis=1))
+    city.consumption[Resources.power] = lambda t: 100#series_reader(power_demand)
     city.cost = lambda t: 0
     city.state_variables = lambda t: ()
     parts.add(city)
 
     solid_waste_incineration = fs.Node(name='Renova CHP')
-    solid_waste_incineration.production[Resources.heat] = series_reader(heat_history['Renova CHP'])
+    solid_waste_incineration.production[Resources.heat] = lambda t: 20#series_reader(heat_history['Renova CHP'])
     solid_waste_incineration.cost = lambda t: 0
     solid_waste_incineration.state_variables = lambda t: ()
     parts.add(solid_waste_incineration)
@@ -342,6 +345,7 @@ def run():
     m = make_model(parameters, seed=1)
     m.solver = fs.get_solver()
     while m.time <= pd.Timestamp('2013-01-15'):
+        print(m.time)
         m.advance()
     # for p in m.descendants:
     #     logger.info(p)
@@ -351,3 +355,6 @@ def run():
     #             attr = getattr(p, k)
     #             if r in attr:
     #                 logger.info('\t{}[{}] ({}): {}'.format(k, r, t_m_1, float(attr[r](t_m_1))))
+
+if __name__ == '__main__':
+    run()
