@@ -43,9 +43,9 @@ def get_power_price(time_unit):
 
 _DEFAULT_PARAMETERS = {
     't0': pd.Timestamp('2013-01-01'),
-    'time_unit' : pd.Timedelta('12h'), # Time unit
+    'time_unit' : pd.Timedelta('1h'), # Time unit
     'step' : pd.Timedelta('12h'), # Time span to lock in each step
-    'horizon' : pd.Timedelta('12h'), # Planning horizon
+    'horizon' : pd.Timedelta('72h'), # Planning horizon
     'prices': {
         Resources.heating_oil: 500, # SEK/MWh (LHV)
         Resources.bio_oil: 500, # SEK/MWh (LHV)
@@ -336,16 +336,18 @@ class DummyRandomizer(object):
     def term(self, *args, **kwargs):
         return 0
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
+def run():
     parameters = get_parameters()
     m = make_model(parameters, seed=1)
     m.solver = fs.get_solver()
-    m.advance()
-    for p in m.descendants:
-        logger.info(p)
-        for r in p.resources:
-            for k in ('production', 'consumption', 'accumulation'):
-                t_m_1 = p.step_time(m.t, -1)
-                attr = getattr(p, k)
-                if r in attr:
-                    logger.info('\t{}[{}] ({}): {}'.format(k, r, t_m_1, float(attr[r](t_m_1))))
+    while m.time <= pd.Timestamp('2013-01-15'):
+        m.advance()
+    # for p in m.descendants:
+    #     logger.info(p)
+    #     for r in p.resources:
+    #         for k in ('production', 'consumption', 'accumulation'):
+    #             t_m_1 = p.step_time(m.t, -1)
+    #             attr = getattr(p, k)
+    #             if r in attr:
+    #                 logger.info('\t{}[{}] ({}): {}'.format(k, r, t_m_1, float(attr[r](t_m_1))))
