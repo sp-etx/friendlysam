@@ -78,7 +78,7 @@ class PulpSolver(object):
         def evaluate(expr):
             self.tot += 1
             if any(hasattr(v, 'value') for v in expr.variables):
-                expr = expr.evaluate({})
+                expr = expr.evaluate()
             try:
                 expressions[expr] = ec[expr]
                 self.reu += 1
@@ -139,4 +139,6 @@ class PulpSolver(object):
 
         logger.info('reused {}'.format(self.reu/self.tot))
 
+        for pv in pulp_vars.values():
+            assert pv.value() is not None
         return {v: pv.value() for v, pv in pulp_vars.items()}

@@ -55,23 +55,9 @@ def get_concrete_evaluators():
 class _Operation(object):
     """docstring for _Operation"""
 
-    _object_cache = {}
-
-    @classmethod
-    def create(cls, *args):
-        key = (cls,) + args
-        try:
-            return _Operation._object_cache[key]
-        except KeyError:
-            obj = object.__new__(cls)
-            _Operation._object_cache[key] = obj
-            obj._key = key
-            obj._args = args
-            return obj
-
-
-    def __new__(cls, *args):
-        return cls.create(*args)
+    def __init__(self, *args):
+        self._args = args
+        self._key = (type(self),) + args
 
     def __hash__(self):
         return hash(self._key)
@@ -94,7 +80,9 @@ class _Operation(object):
                 evaluated_args.append(arg.evaluate(replace=replace, evaluators=evaluators))
             except AttributeError:
                 evaluated_args.append(arg)
-        evaluator = evaluators.get(self.__class__, self.__class__.create)
+
+        evaluator = evaluators.get(self.__class__, self.__class__)
+
         return evaluator(*evaluated_args)
 
     @property
@@ -214,13 +202,13 @@ class Sum(_Operation, _MathEnabled):
     """docstring for Sum"""
     _priority = 1
 
-    def __new__(cls, vector):
-        vector = tuple(vector)
-        return cls.create(*vector)
+    def __init__(self, vector, *other):
+        if len(other) == 0:
+            vector = tuple(vector)
+            super().__init__(*vector)
+        else:
+            super().__init__(vector, *other)
 
-    @property
-    def value(self):
-        return sum(a.value for a in self.args)
 
     def __str__(self):
         return 'Sum{}'.format(self.args)
@@ -269,7 +257,7 @@ class Variable(_MathEnabled):
             return self.value
         except AttributeError:
             if replace is None:
-                replace = {}
+                return self
             return replace.get(self, self)
 
 
@@ -279,6 +267,10 @@ class Variable(_MathEnabled):
         except KeyError as e:
             raise KeyError('variable {} is not in the solution'.format(repr(self))) from e
 
+    __hash__ = object.__hash__
+
+    def __eq__(self, other):
+        return type(self) == type(other) and hash(self) == hash(other)
 
 
     def __str__(self):
