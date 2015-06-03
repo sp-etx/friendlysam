@@ -1,2 +1,0 @@
-import settings
-from make_parameters import make_parameters
