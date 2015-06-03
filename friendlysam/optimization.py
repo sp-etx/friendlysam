@@ -55,9 +55,15 @@ def get_concrete_evaluators():
 class _Operation(object):
     """docstring for _Operation"""
 
-    def __init__(self, *args):
-        self._args = args
-        self._key = (type(self),) + args
+    def __new__(cls, *args):
+        obj = super().__new__(cls)
+        obj._args = args
+        obj._key = (cls,) + args
+        return obj
+
+    @classmethod
+    def create(cls, *args):
+        return cls.__new__(cls, *args)
 
     def __hash__(self):
         return hash(self._key)
@@ -81,7 +87,7 @@ class _Operation(object):
             except AttributeError:
                 evaluated_args.append(arg)
 
-        evaluator = evaluators.get(self.__class__, self.__class__)
+        evaluator = evaluators.get(self.__class__, self.__class__.create)
 
         return evaluator(*evaluated_args)
 
@@ -198,16 +204,20 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Greater(self, other)
 
+
 class Sum(_Operation, _MathEnabled):
     """docstring for Sum"""
     _priority = 1
 
-    def __init__(self, vector, *other):
-        if len(other) == 0:
-            vector = tuple(vector)
-            super().__init__(*vector)
-        else:
-            super().__init__(vector, *other)
+    def __new__(cls, vector):
+        vector = tuple(vector)
+        if len(vector) == 0:
+            return 0
+        return cls.create(*vector)
+
+    @classmethod
+    def create(cls, *args):
+        return super().__new__(cls, *args)
 
 
     def __str__(self):
