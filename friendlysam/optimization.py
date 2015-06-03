@@ -464,10 +464,10 @@ class Problem(object):
         self.add(*addition)
         return self
 
-    @property
-    def variables(self):
+    def variables_without_value(self):
         sources = set(self.constraints) | {self.objective}
-        return set(chain(*(src.variables for src in sources)))
+        variables = set(chain(*(src.variables for src in sources)))
+        return set(v for v in variables if not hasattr(v, 'value'))
 
     @property
     def constraints(self):

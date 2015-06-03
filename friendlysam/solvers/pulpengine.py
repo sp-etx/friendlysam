@@ -68,7 +68,7 @@ class PulpSolver(object):
         ec = self._expr_cache
         pulp_vars = {}
         expressions = {}
-        for v in problem.variables:
+        for v in problem.variables_without_value():
             try:
                 pulp_vars[v] = vc[v]
             except KeyError:
