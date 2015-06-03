@@ -12,7 +12,7 @@ from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 
 
 
-def test_state_vars():
+def test_myopic_dispatch_simple():
     consumption = lambda t: t * 1.5
 
     p = Producer(name='Producer')
@@ -20,6 +20,7 @@ def test_state_vars():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     m = fs.models.MyopicDispatchModel(t0=0, step=3, horizon=7)
+    m.require_cost = lambda part: part is not cl
     m.add_part(cl)
     m.solver = default_solver
     m.advance()

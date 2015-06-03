@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from friendlysam.solvers.pulpengine import PulpSolver
+from friendlysam import get_solver
 
-default_solver = PulpSolver()
+default_solver = get_solver()
 
 ABSTOL = 1e-6
 

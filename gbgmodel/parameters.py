@@ -86,6 +86,7 @@ def make_model(parameters, seed=None):
     for r in Resources:
         cluster = fs.Cluster(resource=r, name='{} cluster'.format(r))
         cluster.add_parts(*(p for p in parts if r in p.resources))
+        cluster.cost = lambda t: 0
         model.add_part(cluster)
 
     for p in model.descendants_and_self:
