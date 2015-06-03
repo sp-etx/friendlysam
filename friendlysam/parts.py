@@ -332,9 +332,6 @@ class Cluster(Node):
             part.unset_cluster(self)
 
 
-    def cost(self, t):
-        return 0
-
     def state_variables(self, t):
         return tuple()
 
@@ -410,9 +407,6 @@ class FlowNetwork(Part):
 
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
-
-    def cost(self, t):
-        return 0
 
     def state_variables(self, *indices):
         return tuple(var(*indices) for var in self._flows.values())

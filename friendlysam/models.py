@@ -10,11 +10,12 @@ from friendlysam.compat import ignored
 
 class MyopicDispatchModel(fs.Part):
     """docstring for MyopicDispatchModel"""
-    def __init__(self, t0=None, horizon=None, step=None, name=None):
+    def __init__(self, t0=None, horizon=None, step=None, name=None, require_cost=True):
         super().__init__(name=name)
         self.horizon = horizon
         self.step = step
         self.time = t0
+        self.require_cost = require_cost
     
     def state_variables(self, t):
         return tuple()
@@ -34,8 +35,14 @@ class MyopicDispatchModel(fs.Part):
 
         parts = self.descendants_and_self
 
+        if self.require_cost is True:
+            cost_contributors = parts
+        else:
+            cost_contributors = filter(self.require_cost, parts)
+        system_cost = fs.Sum(p.cost(t) for p, t in product(cost_contributors, opt_times))
+
         problem = fs.Problem()
-        problem.objective = fs.Minimize(fs.Sum(p.cost(t) for p, t in product(parts, opt_times)))
+        problem.objective = fs.Minimize(system_cost)
         problem += (p.constraints(t) for p, t in product(parts, opt_times))
 
         solution = self.solver.solve(problem)
