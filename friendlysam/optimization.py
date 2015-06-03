@@ -98,8 +98,8 @@ class _Operation(object):
         evaluated = self.evaluate(evaluators=_CONCRETE_EVALUATORS)
         if isinstance(evaluated, numbers.Number):
             return evaluated
-        msg = '{} evaluates to {} which is not a number'.format(self, evaluated)
-        raise NoValueError(msg)
+        msg = 'cannot get a numeric value: {} evaluates to {}'.format(self, evaluated)
+        raise NoValueError(msg).with_traceback(sys.exc_info()[2])
 
     @property
     def variables(self):
@@ -269,7 +269,7 @@ class Variable(_MathEnabled):
 
     def evaluate(self, replace=None, evaluators=None):
         try:
-            return self.value
+            return self._value
         except AttributeError:
             if replace is None:
                 return self
@@ -278,7 +278,7 @@ class Variable(_MathEnabled):
 
     def take_value(self, solution):
         try:
-            self.value = solution[self]
+            self._value = solution[self]
         except KeyError as e:
             raise KeyError('variable {} is not in the solution'.format(repr(self))) from e
 
@@ -302,6 +302,21 @@ class Variable(_MathEnabled):
 
     def __int__(self):
         return int(self.value)
+
+    @property
+    def value(self):
+        try:
+            return self._value
+        except AttributeError as e:
+            raise NoValueError() from e
+
+    @value.setter
+    def value(self, val):
+        self._value = val
+
+    @value.deleter
+    def value(self):
+        del self._value
 
 
 class VariableCollection(object):
