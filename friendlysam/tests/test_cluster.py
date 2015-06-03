@@ -45,12 +45,13 @@ def test_cluster_insanity():
 
 def test_cluster_balance_constraint():
     n = Node()
-    n.production[RESOURCE] = lambda: 0
-    assert len(n.constraints()) == 1
+    n.production[RESOURCE] = lambda idx: 0
+    index = 0
+    assert len(n.constraints(index)) == 1
     c = Cluster(n, resource=RESOURCE)
-    assert len(n.constraints()) == 0
+    assert len(n.constraints(index)) == 0
     c.remove_part(n)
-    assert len(n.constraints()) == 1
+    assert len(n.constraints(index)) == 1
 
 
 def test_cluster_add_remove():

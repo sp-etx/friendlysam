@@ -59,15 +59,15 @@ There is also a convenient class called ``VariableCollection``. It is a sort of 
 	<VariableCollection at 0x...: z>
 	>>> z(1)
 	<Variable at 0x...: z(1)>
-	>>> z(1, 'a')
-	<Variable at 0x...: z(1, 'a')>
-	>>> z()
-	<Variable at 0x...: z()>
+	>>> z((1, 'a'))
+	<Variable at 0x...: z((1, 'a'))>
+	>>> z(None)
+	<Variable at 0x...: z(None)>
 
 
-You can think of ``VariableCollection`` as an indexed variable, but all it really does is to create variables when you call it, and then remember them. As shown above, you can use ``VariableCollection`` with only one index (``x(1)``) or with several (``x(1, 'a')``) or even with zero indices (``x()``). Using zero indices may seem unintuitive, but in some cases it's really convenient as we will show later.
+You can think of ``VariableCollection`` as an indexed variable, but all it really does is to create variables when you call it, and then remember them.
 
-Every index must be hashable. For example, tuples are valid indices, but not lists::
+The index must be hashable. For example, tuples are valid indices, but not lists::
 	
 	>>> z((3, 1, 4))
 	<Variable at 0x...: z((3, 1, 4))>

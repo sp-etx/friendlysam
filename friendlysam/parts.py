@@ -36,24 +36,21 @@ class ConstraintCollection(object):
 
         return constraint
 
-    def _func_description(self, func, *indices):
+    def _func_description(self, func, index):
         func_desc = func.__name__
-        if len(indices) == 1:
-            return '{}({})'.format(func_desc, indices[0])
-        else:
-            return '{}{}'.format(func_desc, indices)
+        return '{}({})'.format(func_desc, index)
 
-    def __call__(self, *indices, **kwargs):
+    def __call__(self, index, **kwargs):
         constraints = set()
 
         for func in self._constraint_funcs:
-            func_output = func(*indices)
+            func_output = func(index)
             try:
                 func_output = iter(func_output)
             except TypeError: # not iterable
                 func_output = (func_output,)
 
-            func_desc = self._func_description(func, *indices)
+            func_desc = self._func_description(func, index)
             constraints.update(self._prepare(item, func_desc) for item in func_output)
 
         return constraints
@@ -181,7 +178,7 @@ class Part(object):
             self.add_part(p)
 
 
-    def state_variables(self, *indices):
+    def state_variables(self, index):
         msg = "{} has not defined state_variables".format(repr(self))
         raise AttributeError(msg).with_traceback(sys.exc_info()[2])
 
@@ -238,21 +235,21 @@ class Node(Part):
         return self._clusters.get(resource, None)
 
 
-    def _balance_constraint(self, resource, *indices):
-        inflow = fs.Sum(flow(*indices) for flow in self._inflows)
-        outflow = fs.Sum(flow(*indices) for flow in self._outflows)
+    def _balance_constraint(self, resource, index):
+        inflow = fs.Sum(flow(index) for flow in self._inflows)
+        outflow = fs.Sum(flow(index) for flow in self._outflows)
 
         lhs = inflow
         rhs = outflow
 
         if resource in self.production:
-            lhs += self.production[resource](*indices)
+            lhs += self.production[resource](index)
 
         if resource in self.consumption:
-            rhs += self.consumption[resource](*indices)
+            rhs += self.consumption[resource](index)
 
         if resource in self.accumulation:
-            rhs += self.accumulation[resource](*indices)
+            rhs += self.accumulation[resource](index)
 
         return Constraint(fs.Equals(lhs, rhs), desc='Balance constraint (resource={})'.format(resource))
 
@@ -262,12 +259,12 @@ class Node(Part):
         balance_dicts = (self.consumption, self.production, self.accumulation)
         return set(chain(*(d.keys() for d in balance_dicts)))
 
-    def _all_balance_constraints(self, *indices):
+    def _all_balance_constraints(self, index):
         # Enforce balance constraints for all resources, except those resources
         # which this node is in a cluster for. The cluster instead makes an aggregated
         # balance constraint for those.
         resources_to_be_balanced = (r for r in self.resources if r not in self._clusters)
-        return set(self._balance_constraint(r, *indices) for r in resources_to_be_balanced)
+        return set(self._balance_constraint(r, index) for r in resources_to_be_balanced)
 
 
 class Cluster(Node):
@@ -285,14 +282,14 @@ class Cluster(Node):
 
     def _get_aggr_func(self, attr_name):
         # attr_name is the attribute to aggregate, like "production", "consumption", or "accumulation"
-        def aggregation(*indices):
+        def aggregation(index):
             terms = []
             for part in self.children:
                 func_dict = getattr(part, attr_name)
                 if self._resource in func_dict:
                     func = func_dict[self._resource]
                     try:
-                        term = func(*indices)
+                        term = func(index)
                         terms.append(term)
                     except TypeError as e:
                         if callable(func):
@@ -350,26 +347,19 @@ class Storage(Node):
 
         self.constraints += self._maxchange_constraints
 
-    def _accumulation(self, *indices):
-        # The reason for this formulation is to make useful error messages. Otherwise
-        # we could just have the signature func(self, t, *other_indices).
-        if len(indices) == 0:
-            raise InsanityError('Storage accumulation needs at least one index. '
-                'The first index should represent time.')
-        t, other_indices = indices[0], indices[1:]
-        t_plus_one = self.step_time(t, 1)
-        return self.volume(t_plus_one, *other_indices) - self.volume(*indices)
+    def _accumulation(self, index):
+        return self.volume(self.step_time(index, 1)) - self.volume(index)
 
-    def _maxchange_constraints(self, *indices):
-        acc, maxchange = self.accumulation[self.resource](*indices), self.maxchange
+    def _maxchange_constraints(self, index):
+        acc, maxchange = self.accumulation[self.resource](index), self.maxchange
         if maxchange is None:
             return ()
         return (
             RelConstraint(acc <= maxchange, 'Max net inflow'),
             RelConstraint(-maxchange <= acc, 'Max net outflow'))
 
-    def state_variables(self, *indices):
-        return {self.volume(*indices)}
+    def state_variables(self, index):
+        return {self.volume(index)}
 
 
 class FlowNetwork(Part):
@@ -408,5 +398,5 @@ class FlowNetwork(Part):
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
 
-    def state_variables(self, *indices):
-        return tuple(var(*indices) for var in self._flows.values())
+    def state_variables(self, index):
+        return tuple(var(index) for var in self._flows.values())

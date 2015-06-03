@@ -319,16 +319,13 @@ class VariableCollection(object):
         VariableCollection._counter += 1
         return VariableCollection._counter
 
-    def __call__(self, *indices):
-        if not indices in self._vars:
-            if len(indices) == 1:
-                name = '{}({})'.format(self.name, indices[0])
-            else:
-                name = '{}{}'.format(self.name, indices)
+    def __call__(self, index):
+        if not index in self._vars:
+            name = '{}({})'.format(self.name, index)
             with namespace(''):
                 variable = Variable(name=name, **self._kwargs)
-            self._vars[indices] = variable
-        return self._vars[indices]
+            self._vars[index] = variable
+        return self._vars[index]
 
 
     def __str__(self):

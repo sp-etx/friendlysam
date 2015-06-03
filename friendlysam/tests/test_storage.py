@@ -41,9 +41,3 @@ def test_basic_functionality():
         assert approx(p.activity(t).value, 0)
         assert approx(c.consumption[RESOURCE](t).value, consumption(t))
         assert approx(s.volume(t).value, s.volume(t-1).value + s.accumulation[RESOURCE](t-1).value)
-
-
-@raises(fs.InsanityError)
-def test_not_indexed_w_storage():
-    s = Storage(RESOURCE)
-    s.constraints()
