@@ -100,6 +100,15 @@ class Part(object):
     def times(self, start, *range_args):
         return list(self.iter_times(start, *range_args))
 
+    def times_between(self, start, end):
+        """Only works if time is orderable!!"""
+        time = start
+        result = []
+        while time <= end:
+            result.append(time)
+            time = self.step_time(time, 1)
+        return result
+
     @property
     def constraints(self):
         return self._constraints
