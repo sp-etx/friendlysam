@@ -15,11 +15,11 @@ def test_novalue():
     expr = x + x
 
     assert not hasattr(x, 'value')
-    assert_raises(fs.NoValueError, lambda something: something.value, x)
+    assert_raises(AttributeError, lambda something: something.value, x)
     assert_raises(fs.NoValueError, lambda something: something.value, expr)
-    assert_raises(fs.NoValueError, lambda something: float(something), x)
+    assert_raises(AttributeError, lambda something: float(something), x)
     assert_raises(fs.NoValueError, lambda something: float(something), expr)
-    assert_raises(fs.NoValueError, lambda something: int(something), x)
+    assert_raises(AttributeError, lambda something: int(something), x)
     assert_raises(fs.NoValueError, lambda something: int(something), expr)
 
     x.value = 1.5
