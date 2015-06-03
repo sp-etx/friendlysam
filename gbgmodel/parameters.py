@@ -47,7 +47,7 @@ def get_power_price(time_unit):
 _DEFAULT_PARAMETERS = {
     't0': pd.Timestamp('2013-01-01'),
     'time_unit' : pd.Timedelta('1h'), # Time unit
-    'step' : pd.Timedelta('12h'), # Time span to lock in each step
+    'step' : pd.Timedelta('6h'), # Time span to lock in each step
     'horizon' : pd.Timedelta('72h'), # Planning horizon
     'prices': {
         Resources.heating_oil: 500, # SEK/MWh (LHV)
@@ -340,6 +340,7 @@ class DummyRandomizer(object):
         return 0
 
 #if __name__ == '__main__':
+import dill
 def run():
     parameters = get_parameters()
     m = make_model(parameters, seed=1)
@@ -347,6 +348,9 @@ def run():
     while m.time <= pd.Timestamp('2013-01-15'):
         print(m.time)
         m.advance()
+        dill.dump(m, open('aoeu','wb'))
+        m = dill.load(open('aoeu','rb'))
+    #m.advance()
     # for p in m.descendants:
     #     logger.info(p)
     #     for r in p.resources:

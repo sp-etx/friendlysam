@@ -41,13 +41,21 @@ _pulp_statuses = {
 class PulpSolver(object):
     """docstring for PulpSolver"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, options):
         super().__init__()
         self.options = DEFAULT_OPTIONS.copy()
-        self.options.update(kwargs)
+        self.options.update(options)
         self._last_problem_vars = {}
         self._last_problem_expressions = {}
         self._var_counter = 0
+
+    def __getstate__(self):
+        return self.options
+
+    def __setstate__(self, options):
+        self.__init__(options)
+
+
 
     def _make_pulp_var(self, variable):
         options = dict(

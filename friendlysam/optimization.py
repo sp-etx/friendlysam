@@ -30,12 +30,14 @@ def namespace(name):
     _namespace_string = old
 
 
-def get_solver(**kwargs):
-    engine = kwargs.pop('engine', 'pulp')
+def get_solver(options=None):
+    if options is None:
+        options = {}
+    engine = options.pop('engine', 'pulp')
 
     if engine == 'pulp':            
         from friendlysam.solvers.pulpengine import PulpSolver
-        return PulpSolver(**kwargs)
+        return PulpSolver(options)
 
 class SolverError(Exception): pass
         
@@ -214,6 +216,9 @@ class Sum(_Operation, _MathEnabled):
         if len(vector) == 0:
             return 0
         return cls.create(*vector)
+
+    def __getnewargs__(self):
+        return (self._args,)
 
     @classmethod
     def create(cls, *args):
