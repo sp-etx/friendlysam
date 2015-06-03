@@ -77,10 +77,8 @@ def make_model(parameters, seed=None):
         horizon=int(parameters['horizon'] / parameters['time_unit']),
         step=int(parameters['step'] / parameters['time_unit']))
 
-    parts = make_parts(parameters, uncertain)
 
-    def step_time(t, step):
-        return t + step * parameters['time_unit']
+    parts = make_parts(parameters, uncertain)
 
     # No explicit distribution channels in this model. Just create a cluster for each resource.
     for r in Resources:
@@ -90,7 +88,7 @@ def make_model(parameters, seed=None):
         model.add_part(cluster)
 
     for p in model.descendants_and_self:
-        p.step_time = step_time
+        p.time_unit = parameters['time_unit']
 
     return model
 

@@ -86,10 +86,12 @@ class Part(object):
             name = '{}{:04d}'.format(type(self).__name__, self._subclass_counters[type(self)])
         self.name = name
 
+        self.time_unit = 1
+
         self._parts = set()
 
-    def step_time(self, t, step):
-        return t + step
+    def step_time(self, index, step):
+        return index + self.time_unit * step
 
     def iter_times(self, start, *range_args):
         for step in range(*range_args):
