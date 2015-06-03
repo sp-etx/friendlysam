@@ -45,8 +45,8 @@ class PulpSolver(object):
         super().__init__()
         self.options = DEFAULT_OPTIONS.copy()
         self.options.update(kwargs)
-        self._var_cache = {}
-        self._expr_cache = {}
+        self._last_problem_vars = {}
+        self._last_problem_expressions = {}
         self._var_counter = 0
 
     def _make_pulp_var(self, variable):
@@ -63,35 +63,36 @@ class PulpSolver(object):
     _evaluators = fs.get_concrete_evaluators()
     _evaluators[fs.Sum] = lambda *x: pulp.lpSum(x)
 
+
     def solve(self, problem):
-        vc = self._var_cache
-        ec = self._expr_cache
-        pulp_vars = {}
         expressions = {}
+        cached_expressions = self._last_problem_expressions
+        def evaluate(expr):
+            if any(hasattr(v, 'value') for v in expr.variables):
+                expressions[expr] = expr.evaluate(replace=pulp_vars, evaluators=self._evaluators)
+            else:
+                try:
+                    evaluated = expressions[expr] = cached_expressions[expr]
+                except KeyError:
+                    expressions[expr] = expr.evaluate(replace=pulp_vars, evaluators=self._evaluators)
+            return expressions[expr]
+
+        cached_vars = self._last_problem_vars
+        pulp_vars = {}
         for v in problem.variables_without_value():
             try:
-                pulp_vars[v] = vc[v]
+                pulp_vars[v] = cached_vars[v]
             except KeyError:
                 pulp_vars[v] = self._make_pulp_var(v)
-        self.reu = 0
-        self.tot = 0
-        def evaluate(expr):
-            self.tot += 1
-            if any(hasattr(v, 'value') for v in expr.variables):
-                expr = expr.evaluate()
-            try:
-                expressions[expr] = ec[expr]
-                self.reu += 1
-            except KeyError:
-                expressions[expr] = expr.evaluate(replace=pulp_vars, evaluators=self._evaluators)
-            return expressions[expr]
-        #pulp_vars = {v: self._make_pulp_var(v) for v in problem.variables}
-        self._var_cache = pulp_vars
+        self._last_problem_vars = pulp_vars
 
         if isinstance(problem.objective, fs.Minimize):
             sense = LpMinimize
         elif isinstance(problem.objective, fs.Maximize):
             sense = LpMaximize
+        else:
+            raise RuntimeError('Unexpected objective {}'.format(problem.objective))
+
         model = LpProblem('friendlysam', sense)
         
         model += evaluate(problem.objective.expr)
@@ -102,8 +103,7 @@ class PulpSolver(object):
                     model += evaluate(c.expr)
                 except Exception:
                     if isinstance(expr, (fs.Greater, fs.Less)):
-                        msg = 'Strict inequalities are not supported by this solver: {}'.format(
-                            c)
+                        msg = 'Strict inequalities are not supported by this solver: {}'.format(c)
                         raise SolverError(msg) from e
                     raise
 
@@ -122,7 +122,7 @@ class PulpSolver(object):
             else:
                 raise NotImplementedError('Cannot handle constraint {}'.format(c))
 
-        self._expr_cache = expressions
+        self._last_problem_expressions = expressions
 
         exceptions = []
         for solver_func in self.options['solver_funcs']:
@@ -136,8 +136,6 @@ class PulpSolver(object):
         
         if not status == LpStatusOptimal:
             raise fs.SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))
-
-        logger.info('reused {}'.format(self.reu/self.tot))
 
         for pv in pulp_vars.values():
             assert pv.value() is not None
