@@ -51,4 +51,4 @@ class MyopicDispatchModel(fs.Part):
             for v in p.state_variables(t):
                 v.take_value(solution)
 
-        self.time = self.step_time(t, self.step)
+        self.time = self.step_time(self.time, self.step)
