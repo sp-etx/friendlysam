@@ -98,16 +98,18 @@ class Part(object):
             yield self.step_time(start, step)
 
     def times(self, start, *range_args):
-        return list(self.iter_times(start, *range_args))
+        return tuple(self.iter_times(start, *range_args))
+
+    def iter_times_between(self, start, end):
+        """Only works if time is orderable!!"""
+        time = start
+        while time <= end:
+            yield time
+            time = self.step_time(time, 1)
 
     def times_between(self, start, end):
         """Only works if time is orderable!!"""
-        time = start
-        result = []
-        while time <= end:
-            result.append(time)
-            time = self.step_time(time, 1)
-        return result
+        return tuple(self.iter_times_between(start, end))
 
     @property
     def constraints(self):
