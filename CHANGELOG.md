@@ -9,6 +9,7 @@
 - Added `get_solver()` function.
 - Added `resources` property to `Part`.
 - Improved expressions and variables: `Sum` class and support for division.
+- Added an `evaluators` keyword to `evaluate()`, allowing drop-in of other functions (e.g. `pulp.lpSum` for the `Sum` operation).
 - New helper functions for creating piecewise affine functions.
 - New time functionality on `Part`. See examples in `tests/test_time.py`.
 - A couple of convenience functions added for getting `list` or `pandas.Series` of values from functions like `Node.production[...]()`.

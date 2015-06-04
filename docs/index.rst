@@ -6,7 +6,7 @@ Friendly Sam is a toolbox developed to formulate and solve optimization-based mo
 
 .. note::
 
-	Friendly Sam 1.0 will be released in June 2015. Please post any questions or issues on the `Issue Tracker <https://github.com/sp-etx/friendlysam/issues>`_.
+	Friendly Sam is work in progress. Please post any questions or issues on the `Issue Tracker <https://github.com/sp-etx/friendlysam/issues>`_.
 
 Friendly Sam is friendly in a number of ways:
 ----------------------------------------------
@@ -29,7 +29,9 @@ Contents:
    install
    developers
    what-friendly-sam-is-for
-   user-guide
+   variables-and-expressions
+   optimization-problems
+   reference
 
 
 
