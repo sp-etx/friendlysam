@@ -9,7 +9,7 @@ from friendlysam import Storage, FlowNetwork
 
 from friendlysam.tests.simple_models import Producer, Consumer, RESOURCE
 from friendlysam.tests import default_solver, approx
-from friendlysam.optimization import Problem, Minimize, Sum
+from friendlysam import Problem, Minimize, Sum
 
 def test_basic_functionality():
     times = range(1,4)

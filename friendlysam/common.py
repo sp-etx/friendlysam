@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import friendlysam as fs
-from friendlysam.optimization import Constraint, VariableCollection, namespace
 from friendlysam.compat import ignored
 
 try:

@@ -10,7 +10,7 @@ from itertools import chain
 import networkx as nx
 
 import friendlysam as fs
-from friendlysam.optimization import Constraint, VariableCollection, namespace
+from friendlysam.opt import Constraint, VariableCollection, namespace
 from friendlysam.compat import ignored
 
 

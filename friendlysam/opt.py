@@ -11,7 +11,9 @@ from itertools import chain
 from enum import Enum
 import numbers
 
+import friendlysam as fs
 from friendlysam.compat import ignored
+from friendlysam.common import short_default_repr
 
 _namespace_string = ''
 
@@ -51,11 +53,8 @@ class Domain(Enum):
 
 DEFAULT_DOMAIN = Domain.real
 
-def get_concrete_evaluators():
-    return _CONCRETE_EVALUATORS.copy()
-
-class _Operation(object):
-    """docstring for _Operation"""
+class Operation(object):
+    """docstring for Operation"""
 
     def __new__(cls, *args):
         obj = super().__new__(cls)
@@ -78,8 +77,9 @@ class _Operation(object):
         return self._args
     
     def evaluate(self, replace=None, evaluators=None):
+        """docstring"""
         if evaluators is None:
-            evaluators = {}
+            evaluators = DEFAULT_EVALUATORS
         if replace is None:
             replace = {}
         evaluated_args = []
@@ -95,7 +95,7 @@ class _Operation(object):
 
     @property
     def value(self):
-        evaluated = self.evaluate(evaluators=_CONCRETE_EVALUATORS)
+        evaluated = self.evaluate(evaluators=CONCRETE_EVALUATORS)
         if isinstance(evaluated, numbers.Number):
             return evaluated
         msg = 'cannot get a numeric value: {} evaluates to {}'.format(self, evaluated)
@@ -119,7 +119,7 @@ class _Operation(object):
         if isinstance(arg, (numbers.Number, Variable)):
             return str(arg)
 
-        if isinstance(arg, _Operation) and arg._priority >= self._priority:
+        if isinstance(arg, Operation) and arg._priority >= self._priority:
             return str(arg)
         
         return '({})'.format(arg)
@@ -127,8 +127,9 @@ class _Operation(object):
     def __str__(self):
         return self._format.format(*(self._format_arg(a) for a in self._args))
 
-    def __repr__(self):
-        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+    # def __repr__(self):
+    #     return '<{}.{} at {}>'.format(self.__module__, self.__class__.__name__, hex(id(self)))
+    __repr__ = short_default_repr
 
     def __float__(self):
         return float(self.value)
@@ -136,12 +137,15 @@ class _Operation(object):
     def __int__(self):
         return int(self.value)
 
-class Relation(_Operation):
+class Relation(Operation):
+    """docstring"""
 
     _priority = 0
 
     def __bool__(self):
-        raise TypeError("{} is a Relation and its truthyness should not be tested".format(self))
+        msg = ('{} is a Relation and its truthyness should not be tested. '
+            'Use the .value property instead.').format(self)
+        raise TypeError(msg)
 
 
     @property
@@ -155,12 +159,13 @@ class LessEqual(Relation):
     _format = '{} <= {}'
 
 class GreaterEqual(Relation):
+    """docstring"""
     _format = '{} >= {}'
 
 class Greater(Relation):
     _format = '{} > {}'
 
-class Equals(Relation):
+class Eq(Relation):
     _format = '{} == {}'
 
 def _is_zero(something):
@@ -206,8 +211,10 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Greater(self, other)
 
+    __repr__ = short_default_repr
 
-class Sum(_Operation, _MathEnabled):
+
+class Sum(Operation, _MathEnabled):
     """docstring for Sum"""
     _priority = 1
 
@@ -226,22 +233,22 @@ class Sum(_Operation, _MathEnabled):
 
 
     def __str__(self):
-        return 'Sum{}'.format(self.args)
+        return 'Sum({})'.format(', '.join(str(a) for a in self.args))
 
 
-class Add(_Operation, _MathEnabled):
+class Add(Operation, _MathEnabled):
     """docstring for Add"""
     _format = '{} + {}'
     _priority = 1
 
 
-class Sub(_Operation, _MathEnabled):
+class Sub(Operation, _MathEnabled):
     """docstring for Sub"""
     _format = '{} - {}'
     _priority = 1
         
     
-class Mul(_Operation, _MathEnabled):
+class Mul(Operation, _MathEnabled):
     """docstring for Mul"""
     
     _format = '{} * {}'
@@ -293,7 +300,7 @@ class Variable(_MathEnabled):
 
 
     def __repr__(self):
-        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+        return short_default_repr(self, desc=str(self))
 
 
     def __float__(self):
@@ -348,10 +355,19 @@ class VariableCollection(object):
 
 
     def __repr__(self):
-        return '<{} at {}: {}>'.format(self.__class__.__name__, hex(id(self)), self)
+        return short_default_repr(self, desc=str(self))
 
 
-class ConstraintError(Exception): pass
+    def __truediv__(self, other):
+        raise fs.InsanityError().with_traceback(sys.exc_info()[2])
+
+
+class ConstraintError(Exception):
+    """docstring"""
+    
+    def __init__(self, *args, **kwargs):
+        self.constraint = kwargs.pop('constraint', None)
+        super().__init__(*args, **kwargs)
 
 
 class _ConstraintBase(object):
@@ -365,6 +381,8 @@ class _ConstraintBase(object):
     def variables(self):
         raise NotImplementedError('this is a responsibility of subclasses')
 
+    __repr__ = short_default_repr
+
 
 class Constraint(_ConstraintBase):
     """docstring for Constraint"""
@@ -373,7 +391,14 @@ class Constraint(_ConstraintBase):
         self.expr = expr
 
     def __str__(self):
-        return str(self.expr)
+        if self.desc or self.origin:
+            if self.origin:
+                origin_text = ' from ' + str(self.origin)
+            else:
+                origin_text = ''
+            return '<Constraint{}: {}>'.format(origin_text, self.desc)
+        else:
+            return repr(self)
 
 
     @property
@@ -454,7 +479,7 @@ def piecewise_affine_constraints(variables, include_lb=True):
     return set.union(
         {
             SOS2(variables, desc='Picewise affine'),
-            Constraint(Equals(Sum(variables), 1), desc='Piecewise affine sum')
+            Constraint(Eq(Sum(variables), 1), desc='Piecewise affine sum')
         },
         {
             Constraint(v >= 0, 'Piecewise affine weight') for v in variables
@@ -476,6 +501,7 @@ class Problem(object):
         self._constraints.add(constraint)
 
     def add(self, *additions):
+        """docstring"""
         for constraint in additions:
             try:
                 for constraint in constraint:
@@ -504,12 +530,21 @@ class Problem(object):
         """Try to solve the optimization problem"""
         raise NotImplementedError()
 
-_CONCRETE_EVALUATORS = {
-    Equals: operator.eq,
+CONCRETE_EVALUATORS = {
+    Eq: operator.eq,
     LessEqual: operator.le,
     GreaterEqual: operator.ge,
     Add: operator.add,
     Sub: operator.sub,
     Mul: operator.mul,
     Sum: lambda *x: sum(x)
+}
+
+DEFAULT_EVALUATORS = {
+    Eq: operator.eq,
+    LessEqual: operator.le,
+    GreaterEqual: operator.ge,
+    Add: operator.add,
+    Sub: operator.sub,
+    Mul: operator.mul   
 }

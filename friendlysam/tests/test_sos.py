@@ -39,7 +39,7 @@ def test_simple_SOS1():
 def test_simple_pwa_1():
     x_vals = (1, 1.5, 2)
     y_vals = [3, 2, 4]
-    x, y, constraints = fs.optimization.piecewise_affine(zip(x_vals, y_vals), name='aoeu')
+    x, y, constraints = fs.piecewise_affine(zip(x_vals, y_vals), name='aoeu')
     prob = fs.Problem()
     prob.objective = fs.Minimize(y)
     prob.add(constraints)
@@ -54,7 +54,7 @@ def test_simple_pwa_1():
 
 def test_simple_pwa_2():
     points = {1: 3, 1.5: 2, 2: 4}
-    x, y, constraints = fs.optimization.piecewise_affine(points, name='aoeu')
+    x, y, constraints = fs.piecewise_affine(points, name='aoeu')
     prob = fs.Problem()
     prob.objective = fs.Maximize(y)
     prob.add(constraints)
