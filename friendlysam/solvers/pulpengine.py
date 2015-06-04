@@ -10,7 +10,7 @@ from itertools import chain
 from pulp import *
 
 import friendlysam as fs
-from friendlysam import SolverError
+from friendlysam import SolverError, ConstraintError
 
 
 def _cbc_solve(problem):
@@ -19,8 +19,8 @@ def _cbc_solve(problem):
 
 DEFAULT_OPTIONS = dict(
     solver_funcs=[
-        GUROBI_CMD(msg=0).solve,
-        _cbc_solve
+        _cbc_solve,
+        GUROBI_CMD(msg=0).solve
     ])
 
 _domain_mapping = {
@@ -68,7 +68,7 @@ class PulpSolver(object):
 
         return LpVariable(name, **options)
 
-    _evaluators = fs.get_concrete_evaluators()
+    _evaluators = fs.CONCRETE_EVALUATORS.copy()
     _evaluators[fs.Sum] = lambda *x: pulp.lpSum(x)
 
 
@@ -108,11 +108,19 @@ class PulpSolver(object):
         for i, c in enumerate(problem.constraints):
             if isinstance(c, fs.Constraint):
                 try:
-                    model += evaluate(c.expr)
+                    expr = evaluate(c.expr)
+                    if type(expr) == bool: # Because __eq__ is overloaded on pulp expressions
+                        if expr == True:
+                            continue
+                        else:
+                            msg = ('The expression in {} evaluates to False, '
+                                'so the problem is infeasible.').format(c)
+                            raise ConstraintError(msg, constraint=c)
+                    model += expr
                 except Exception:
                     if isinstance(expr, (fs.Greater, fs.Less)):
                         msg = 'Strict inequalities are not supported by this solver: {}'.format(c)
-                        raise SolverError(msg) from e
+                        raise ConstraintError(msg, constraint=c) from e
                     raise
 
             elif isinstance(c, (fs.SOS1, fs.SOS2)):
