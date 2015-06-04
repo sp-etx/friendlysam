@@ -21,20 +21,20 @@ class Consumer(Node):
         self.consumption[RESOURCE] = lambda t: self.activity(t) * 0.5
         cons = self.consumption[RESOURCE]
         if variant == 0:
-            self.constraints += lambda t: fs.Equals(cons(t), consumption(t))
+            self.constraints += lambda t: fs.Eq(cons(t), consumption(t))
         elif variant == 1:
-            self.constraints += lambda t: (fs.Equals(cons(t), consumption(t)), fs.Equals(cons(t), cons(t)))
+            self.constraints += lambda t: (fs.Eq(cons(t), consumption(t)), fs.Eq(cons(t), cons(t)))
         elif variant == 2:
-            self.constraints += (lambda t: fs.Equals(cons(t), consumption(t)) for i in range(1))
+            self.constraints += (lambda t: fs.Eq(cons(t), consumption(t)) for i in range(1))
         elif variant == 3:
             self.constraints += self._consumption_constraint
         elif variant == 4:
-            self.constraints += lambda t: Constraint(fs.Equals(cons(t), consumption(t)), 'Consumption')
+            self.constraints += lambda t: Constraint(fs.Eq(cons(t), consumption(t)), 'Consumption')
         else:
             raise ValueError('variant {} not defined'.format(variant))
 
     def _consumption_constraint(self, t):
-        return fs.Equals(self.consumption[RESOURCE](t), self._cons_func(t))
+        return fs.Eq(self.consumption[RESOURCE](t), self._cons_func(t))
 
 
 def check_variant(variant, sum_func=sum):
@@ -64,7 +64,7 @@ def check_variant(variant, sum_func=sum):
 @raises(RuntimeError)
 def non_callable_constraint():
     cl = Cluster(resource=RESOURCE)
-    cl.constraints += fs.Equals(fs.Variable(), 3)
+    cl.constraints += fs.Eq(fs.Variable(), 3)
 
 def test_variants():
     for variant in range(5):

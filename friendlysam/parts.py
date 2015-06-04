@@ -264,7 +264,7 @@ class Node(Part):
         if resource in self.accumulation:
             rhs += self.accumulation[resource](index)
 
-        return Constraint(fs.Equals(lhs, rhs), desc='Balance constraint (resource={})'.format(resource))
+        return Constraint(fs.Eq(lhs, rhs), desc='Balance constraint (resource={})'.format(resource))
 
 
     @property
