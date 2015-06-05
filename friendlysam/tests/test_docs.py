@@ -2,6 +2,7 @@
 
 import doctest
 import os
+import friendlysam
 
 def test_docs():
     this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -12,3 +13,10 @@ def test_docs():
         failures, tests = doctest.testfile(path, optionflags=doctest.ELLIPSIS)
         if failures > 0:
             raise Exception('{} out of {} doctests failed'.format(failures, tests))
+
+def test_docstrings_in_module():
+    doctest.testmod(friendlysam)
+
+#print(friendlysam.opt)
+
+print(doctest.testmod(friendlysam.opt))

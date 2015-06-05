@@ -64,6 +64,7 @@ class Operation(object):
 
     @classmethod
     def create(cls, *args):
+        """aoeu"""
         return cls.__new__(cls, *args)
 
     def __hash__(self):
@@ -77,17 +78,53 @@ class Operation(object):
         return self._args
     
     def evaluate(self, replace=None, evaluators=None):
-        """docstring"""
+        """Evaluate the expression recursively.
+
+        Evaluating an expression:
+
+            1. Get an evaluating function. If the class of the present expression
+            is in the :obj:`evaluators` dict, use that. Otherwise, take the :meth:`create`
+            classmethod of the present expression class.
+
+            2. Evaluate all the arguments. For each argument ``arg``, first try to replace
+            it by looking for ``replace[arg]``. If it's not there, try to evaluate it
+            by calling ``arg.evaluate()`` with the same arguments supplied to this call.
+            If ``arg.evaluate()`` is not present, leave the argument unchanged.
+
+            3. Run the evaluating function ``func(*evaluated_args)`` and return the result.
+
+        Args:
+            replace (dict, optional): Replacements for arguments. Arguments matching keys
+                will be replaced by specified values.
+            evaluators (dict, optional): Use these evaluators instead of the default
+                (which is the :meth:`create` classmethod of the argument's class). Arguments
+                whose ``__class__`` equals keys will be evaluated with specified function.
+
+        Examples:
+
+            >>> x = VariableCollection('x')
+            >>> expr = x(1) + x(2)
+            >>> print(expr.evaluate())
+            x(1) + x(2)
+            >>> print(expr.evaluate(replace={x(2): x(3), x(1): 0}))
+            0 + x(3)
+
+        """
         if evaluators is None:
-            evaluators = DEFAULT_EVALUATORS
+            evaluators = {}
         if replace is None:
             replace = {}
         evaluated_args = []
         for arg in self.args:
             try:
-                evaluated_args.append(arg.evaluate(replace=replace, evaluators=evaluators))
-            except AttributeError:
-                evaluated_args.append(arg)
+                evaluated = replace[arg]
+            except KeyError:
+                try:
+                    evaluated = arg.evaluate(replace=replace, evaluators=evaluators)
+                except AttributeError:
+                    evaluated = arg
+            finally:
+                evaluated_args.append(evaluated)
 
         evaluator = evaluators.get(self.__class__, self.__class__.create)
 
@@ -278,9 +315,7 @@ class Variable(_MathEnabled):
         try:
             return self._value
         except AttributeError:
-            if replace is None:
-                return self
-            return replace.get(self, self)
+            return self
 
 
     def take_value(self, solution):
@@ -538,13 +573,4 @@ CONCRETE_EVALUATORS = {
     Sub: operator.sub,
     Mul: operator.mul,
     Sum: lambda *x: sum(x)
-}
-
-DEFAULT_EVALUATORS = {
-    Eq: operator.eq,
-    LessEqual: operator.le,
-    GreaterEqual: operator.ge,
-    Add: operator.add,
-    Sub: operator.sub,
-    Mul: operator.mul   
 }
