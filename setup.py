@@ -27,6 +27,10 @@ setup(
         'PuLP==1.5.8',
         'networkx==1.9.1'
     ],
+    extras_require = {
+        'pandas':  ["pandas>=0.16.1"],
+        'pickling': ["dill>=0.2.2"]
+        },
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         # How mature is this project? Common values are
@@ -45,6 +49,7 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 3'
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4'
     ]
     )

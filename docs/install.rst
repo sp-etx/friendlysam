@@ -33,3 +33,14 @@ Install Friendly Sam
 Assuming you have entered/activated your Python virtual environment, or wherever you want to install it, open a command prompt/shell and run the command::
 
 	pip install friendlysam
+
+Optional dependencies
+^^^^^^^^^^^^^^^^^^^^^^^
+
+If you want to add support for ``pandas`` related stuff, or for saving and loading models using ``dill``, do one of::
+
+    pip install friendlysam[pandas]
+    pip install friendlysam[pickling]
+    pip install friendlysam[pandas,pickling]
+
+
