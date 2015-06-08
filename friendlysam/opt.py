@@ -25,6 +25,19 @@ def _prefix_namespace(s):
 
 @contextmanager
 def namespace(name):
+    """Context manager for prefixing variable names.
+
+    Examples:
+
+        >>> with namespace('dimensions'):
+        ...     w = Variable('width')
+        ...     h = VariableCollection('heights')
+        ...
+        >>> w
+        <friendlysam.opt.Variable at 0x...: dimensions.width>
+        >>> h(3)
+        <friendlysam.opt.Variable at 0x...: dimensions.heights(3)>
+    """
     global _namespace_string
     old = _namespace_string
     _namespace_string = str(name)
@@ -32,26 +45,57 @@ def namespace(name):
     _namespace_string = old
 
 
-def get_solver(options=None):
+def get_solver(engine='pulp', options=None):
+    """Get a solver object.
+
+    Args:
+        engine (str, optional): Which engine to use.
+        options (dict, optional): Parameters to the engine constructor.
+
+            If ``engine == 'pulp'``, the engine is created using
+            ``PulpSolver(options)``. See 
+            :class:`~friendlysam.solvers.pulpengine.PulpSolver` constructor
+            for details.
+
+    """
     if options is None:
         options = {}
-    engine = options.pop('engine', 'pulp')
 
     if engine == 'pulp':            
         from friendlysam.solvers.pulpengine import PulpSolver
         return PulpSolver(options)
 
-class SolverError(Exception): pass
+class SolverError(Exception):
+    """A generic exception raised by a solver instance."""
+    pass
         
-class NoValueError(AttributeError): pass
+class NoValueError(AttributeError):
+    """Raised when a variable or expression has no value."""
+    pass
 
 class Domain(Enum):
-    """docstring for Domain"""
+    """Domain of a variable.
+
+    :class:`Variable` and :class:`VariableCollection` support these
+    domains passed in with the ``domain`` keyword argument of the
+    constructor.
+
+    Examples:
+
+        >>> s = get_solver()
+        >>> prob = Problem()
+        >>> x = Variable('x', domain=Domain.integer)
+        >>> prob.objective = Minimize(x)
+        >>> prob += (x >= 41.5)
+        >>> solution = s.solve(prob)
+        >>> solution[x] == 42
+        True
+
+    """
     real = 0
     integer = 1
     binary = 2
 
-DEFAULT_DOMAIN = Domain.real
 
 class Operation(object):
     """An operation on some arguments.
@@ -59,8 +103,8 @@ class Operation(object):
     This is a base class. Concrete examples:
 
     Arithmetic operations: :class:`Add`, :class:`Sub`, :class:`Mul`, :class:`Sum`
-    Relations: :class:`Less`, :class:`LessEqual`, :class:`Eq`, :class:`GreaterEqual`,
-        :class:`Greater`
+
+    Relations: :class:`Less`, :class:`LessEqual`, :class:`Eq`
 
     Note:
         The :class:`Variable` class and the arithmetic operation classes have
@@ -265,6 +309,204 @@ class Operation(object):
     def __int__(self):
         return int(self.value)
 
+
+class _MathEnabled(object):
+    """docstring for _MathEnabled"""
+
+    def __add__(self, other):
+        return self if other == 0 else Add(self, other)
+
+    def __radd__(self, other):
+        return self if other == 0 else Add(other, self)
+
+    def __sub__(self, other):
+        return self if other == 0 else Sub(self, other)
+
+    def __rsub__(self, other):
+        return -self if other == 0 else Sub(other, self)
+
+    def __mul__(self, other):
+        return 0 if other == 0 else Mul(self, other)
+
+    def __rmul__(self, other):
+        return 0 if other == 0 else Mul(other, self)
+
+    def __truediv__(self, other):
+        return self * (1/other) # Takes care of division by scalars at least
+
+    def __neg__(self):
+        return -1 * self
+
+    def __le__(self, other):
+        return LessEqual(self, other)
+
+    def __ge__(self, other):
+        return LessEqual(other, self)
+
+    def __lt__(self, other):
+        return Less(self, other)
+
+    def __gt__(self, other):
+        return Less(other, self)
+
+    __repr__ = short_default_repr
+
+
+class Add(Operation, _MathEnabled):
+    """Addition operator.
+
+    See :class:`Operation` for a general description of operations.
+
+    Args:
+        *args: Should be exactly two terms to add.
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> expr = x(1) + x(2)
+        >>> expr
+        <friendlysam.opt.Add at 0x...>
+        >>> expr == Add(x(1), x(2))
+        True
+        >>> x(1).value, x(2).value = 2, 3
+        >>> float(expr)
+        5.0
+
+    """
+    _format = '{} + {}'
+    _priority = 1
+
+
+class Sub(Operation, _MathEnabled):
+    """Addition operator.
+
+    See :class:`Operation` for a general description of operations.
+
+    Args:
+        *args: Should be exactly two items to subtract.
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> expr = x(1) - x(2)
+        >>> expr
+        <friendlysam.opt.Sub at 0x...>
+        >>> expr == Sub(x(1), x(2))
+        True
+        >>> x(1).value, x(2).value = 2, 3
+        >>> float(expr)
+        -1.0
+
+    """
+    _format = '{} - {}'
+    _priority = 1
+        
+    
+class Mul(Operation, _MathEnabled):
+    """Addition operator.
+
+    See :class:`Operation` for a general description of operations.
+
+    Args:
+        *args: Should be exactly two terms to multiply.
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> expr = x(1) * x(2)
+        >>> expr
+        <friendlysam.opt.Mul at 0x...>
+        >>> expr == Mul(x(1), x(2))
+        True
+        >>> x(1).value, x(2).value = 2, 3
+        >>> float(expr)
+        6.0
+
+    Note:
+
+        There is currently no division operator, but the operator ``/``
+        is overloaded such that ``x = a / b`` is equivalent to ``x = a * (1/b)``.
+        Hence, you can do simple things like
+
+        >>> print(x(1) / 4)
+        x(1) * 0.25
+
+    """
+    
+    _format = '{} * {}'
+    _priority = 2
+
+
+class Sum(Operation, _MathEnabled):
+    """A sum of items.
+
+    See the base class :class:`Operation` for a basic description of attributes
+    and methods.
+
+    Attributes:
+        args: A tuple of items to be summed.
+
+    Examples:
+
+        Note that the constructor takes an iterable of arguments, just like the
+        built-in :func:`sum` function, but the classmethod :meth:`create` takes 
+        a list of arguments, as follows.
+
+            >>> x = VariableCollection('x')
+            >>> terms = [x(i) for i in range(4)]
+            >>> Sum(terms) == Sum.create(*terms)
+            True
+
+            >>> s = Sum(terms)
+            >>> s.evaluate(evaluators={Sum: sum})
+            Traceback (most recent call last):
+            ...
+            TypeError: sum expected at most 2 arguments, got 4
+
+            >>> s.evaluate(evaluators={Sum: lambda *args: sum(args)})
+            <friendlysam.opt.Add at 0x...>
+
+    """
+    _priority = 1
+
+    def __new__(cls, vector):
+        """Create a new Sum object
+
+        Args:
+            vector (iterable): The items to sum. Can be any iterable, also a generator,
+                and may be zero length.
+        """
+        vector = tuple(vector)
+        if len(vector) == 0:
+            return 0
+        return cls.create(*vector)
+
+    def __getnewargs__(self):
+        # This is for pickling.
+        return (self._args,)
+
+    @classmethod
+    def create(cls, *args):
+        """Classmethod to create a new Sum object.
+
+        Note that :meth:`create` has a different signature than the constructor.
+        The constructor takes an iterable as only argument, but :meth:`create`
+        takes a list of arguments.
+
+        Example:
+
+            >>> x = VariableCollection('x')
+            >>> terms = [x(i) for i in range(4)]
+            >>> Sum(terms) == Sum.create(*terms)
+            True
+        """
+        return super().__new__(cls, *args)
+
+
+    def __str__(self):
+        return 'Sum({})'.format(', '.join(str(a) for a in self.args))
+
+
 class Relation(Operation):
     """Base class for binary relations.
 
@@ -373,140 +615,49 @@ class Eq(Relation):
 
     _format = '{} == {}'
 
-class _MathEnabled(object):
-    """docstring for _MathEnabled"""
 
-    def __add__(self, other):
-        return self if other == 0 else Add(self, other)
+class Variable(_MathEnabled):
+    """A variable to build expressions with.
 
-    def __radd__(self, other):
-        return self if other == 0 else Add(other, self)
+    Args:
+        name (str, optional): A name of the variable. It has no relation
+            to the identity of the variable. Just a name used in string
+            representations.
+        lb (number, optional): If supplied, a lower bound on the variable
+            in optimization problems. If not supplied, the variable is
+            unbounded downwards.
+        ub (number, optional): If supplied, an upper bound on the variable
+            in optimization problems. If not supplied, the variable is
+            unbounded upwards.
+        domain (any of the :class:`Domain` values): The domain of the
+            variable, enforced in optimization problems.
 
-    def __sub__(self, other):
-        return self if other == 0 else Sub(self, other)
+    Note:
+        The :attr:`name`, :attr:`lb`, :attr:`ub` and :attr:`domain` can 
+        also be set as attributes after creation.
 
-    def __rsub__(self, other):
-        return -self if other == 0 else Sub(other, self)
+            >>> a = Variable('a')
+            >>> a.lb = 10
+            >>> a.Domain = Domain.integer
 
-    def __mul__(self, other):
-        return 0 if other == 0 else Mul(self, other)
+        is equivalent to
 
-    def __rmul__(self, other):
-        return 0 if other == 0 else Mul(other, self)
-
-    def __truediv__(self, other):
-        return self * (1/other) # Takes care of division by scalars at least
-
-    def __neg__(self):
-        return -1 * self
-
-    def __le__(self, other):
-        return LessEqual(self, other)
-
-    def __ge__(self, other):
-        return LessEqual(other, self)
-
-    def __lt__(self, other):
-        return Less(self, other)
-
-    def __gt__(self, other):
-        return Less(other, self)
-
-    __repr__ = short_default_repr
-
-
-class Sum(Operation, _MathEnabled):
-    """A sum of items
-
-    See the base class :class:`Operation` for a basic description of attributes
-    and methods.
-
-    Attributes:
-        args: A tuple of items to be summed.
-
+            >>> a = Variable('a', lb=10, domain=Domain.integer)
 
     Examples:
 
-        Note that the constructor takes an iterable of arguments, just like the
-        built-in :func:`sum` function, but the classmethod :meth:`create` takes 
-        a list of arguments, as follows.
+        The :func:`namespace` context manager can be used to conveniently
+        name groups of variables.
 
-            >>> x = VariableCollection('x')
-            >>> terms = [x(i) for i in range(4)]
-            >>> Sum(terms) == Sum.create(*terms)
-            True
-
-            >>> s = Sum(terms)
-            >>> s.evaluate(evaluators={Sum: sum})
-            Traceback (most recent call last):
+            >>> with namespace('dimensions'):
+            ...     w = Variable('width')
+            ...     h = Variable('height')
             ...
-            TypeError: sum expected at most 2 arguments, got 4
+            >>> w.name, h.name
+            ('dimensions.width', 'dimensions.height')
 
-            >>> s.evaluate(evaluators={Sum: lambda *args: sum(args)})
-            <friendlysam.opt.Add at 0x...>
 
     """
-    _priority = 1
-
-    def __new__(cls, vector):
-        """Create a new Sum object
-
-        Args:
-            vector (iterable): The items to sum. Can be any iterable, also a generator,
-                and may be zero length.
-        """
-        vector = tuple(vector)
-        if len(vector) == 0:
-            return 0
-        return cls.create(*vector)
-
-    def __getnewargs__(self):
-        # This is for pickling.
-        return (self._args,)
-
-    @classmethod
-    def create(cls, *args):
-        """Classmethod to create a new Sum object.
-
-        Note that :meth:`create` has a different signature than the constructor.
-        The constructor takes an iterable as only argument, but :meth:`create`
-        takes a list of arguments.
-
-        Example:
-
-            >>> x = VariableCollection('x')
-            >>> terms = [x(i) for i in range(4)]
-            >>> Sum(terms) == Sum.create(*terms)
-            True
-        """
-        return super().__new__(cls, *args)
-
-
-    def __str__(self):
-        return 'Sum({})'.format(', '.join(str(a) for a in self.args))
-
-
-class Add(Operation, _MathEnabled):
-    """docstring for Add"""
-    _format = '{} + {}'
-    _priority = 1
-
-
-class Sub(Operation, _MathEnabled):
-    """docstring for Sub"""
-    _format = '{} - {}'
-    _priority = 1
-        
-    
-class Mul(Operation, _MathEnabled):
-    """docstring for Mul"""
-    
-    _format = '{} * {}'
-    _priority = 2
-
-
-class Variable(_MathEnabled):
-    """docstring for Variable"""
 
     _counter = 0
 
@@ -515,7 +666,7 @@ class Variable(_MathEnabled):
         return Variable._counter
 
 
-    def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
+    def __init__(self, name=None, lb=None, ub=None, domain=Domain.real):
         super().__init__()
         self.name = 'x{}'.format(self._next_counter()) if name is None else name
         self.name = _prefix_namespace(self.name)
@@ -529,6 +680,47 @@ class Variable(_MathEnabled):
 
 
     def evaluate(self, replace=None, evaluators=None):
+        """Evaluate a variable.
+
+        See :meth:`Operation.evaluate` for a general explanation of
+        expression evaluation.
+
+        A :class:`Variable` is evaluated with the following priority order:
+
+            1. If it has a :attr:`value`, that is returned.
+
+            2. Otherwise, if the variable is a key in the `replace` dictionary,
+            the corresponding value is returned.
+
+            3. Otherwise, the variable itself is returned.
+
+        Args:
+
+            replace (dict, optional): Replacements.
+            evaluators (dict, optional): Has no effect. Just included to be
+                compatible with the signature of :meth:`Operation.evaluate`.
+
+        Examples:
+
+            >>> x = Variable('x')
+            >>> x.evaluate() == x
+            True
+            >>> x.evaluate({x: 5}) == 5
+            True
+
+            >>> x.value = -1
+            >>> x.evaluate() == -1
+            True
+            >>> x.evaluate({x: 5}) == -1 # .value goes first!
+            True
+
+            >>> del x.value
+            >>> x.value
+            Traceback (most recent call last):
+            ...
+            friendlysam.opt.NoValueError
+
+        """
         try:
             return self._value
         except AttributeError:
@@ -539,6 +731,13 @@ class Variable(_MathEnabled):
 
 
     def take_value(self, solution):
+        """Try setting the value of this variable from a dictionary.
+
+        Set ``self.value = solution[self]`` if possible.
+
+        Raises:
+            KeyError if ``solution[self]`` is not available.
+        """
         try:
             self._value = solution[self]
         except KeyError as e:
@@ -567,6 +766,13 @@ class Variable(_MathEnabled):
 
     @property
     def value(self):
+        """Value property.
+
+        Warning:
+
+            There is nothing stopping you from setting ``value`` to a value
+            which is inconsistent with the bounds and the domain of the variable.
+        """
         try:
             return self._value
         except AttributeError as e:
