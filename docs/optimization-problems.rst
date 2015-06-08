@@ -46,7 +46,7 @@ Debugging constraints
 Now let's add another constraint:
 
     >>> x(1).value = 0
-    >>> prob.add(x(1) >= 1)
+    >>> prob.add(1 <= x(1))
     >>> solver.solve(prob)
     Traceback (most recent call last):
     ...
@@ -65,16 +65,16 @@ In this case it's obvious why the problem could not be solved. But for argument'
     ...     print(failed_constraint.origin)
     ... 
     <friendlysam.opt.Constraint at 0x...>
-    <friendlysam.opt.GreaterEqual at 0x...>
-    x(1) >= 1
+    <friendlysam.opt.LessEqual at 0x...>
+    1 <= x(1)
     Ad hoc constraint
     None
 
 OK, that's helpful! We got the problematic constraint out. And there are a few things you should note.
 
-    1. The type of the failed constraint is :class:`friendlysam.opt.Constraint`. It was automatically created when we added a :class:`friendlysam.opt.GreaterEqual` constraint to the problem, and its sole purpose is to wrap the inequality ``x(1) >= 1`` and to add some metadata.
+    1. The type of the failed constraint is :class:`friendlysam.opt.Constraint`. It was automatically created when we added a :class:`friendlysam.opt.LessEqual` constraint to the problem, and its sole purpose is to wrap the inequality ``1 <= x(1)`` and to add some metadata.
 
-    2. The :class:`~friendlysam.opt.Constraint` object contains the :class:`~friendlysam.opt.GreaterEqual` object that we added to the problem.
+    2. The :class:`~friendlysam.opt.Constraint` object contains the :class:`~friendlysam.opt.LessEqual` object that we added to the problem.
 
     3. The :class:`~friendlysam.opt.Constraint` object contains also a description ``desc`` and a variable called ``origin`` which is supposed to say something about where the constraint comes from.
 

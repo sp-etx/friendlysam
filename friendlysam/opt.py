@@ -240,13 +240,13 @@ class _MathEnabled(object):
         return LessEqual(self, other)
 
     def __ge__(self, other):
-        return GreaterEqual(self, other)
+        return LessEqual(other, self)
 
     def __lt__(self, other):
         return Less(self, other)
 
     def __gt__(self, other):
-        return Greater(self, other)
+        return Less(other, self)
 
     __repr__ = short_default_repr
 
@@ -567,8 +567,8 @@ class Problem(object):
 
 CONCRETE_EVALUATORS = {
     Eq: operator.eq,
+    Less: operator.lt,
     LessEqual: operator.le,
-    GreaterEqual: operator.ge,
     Add: operator.add,
     Sub: operator.sub,
     Mul: operator.mul,

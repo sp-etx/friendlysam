@@ -118,7 +118,7 @@ class PulpSolver(object):
                             raise ConstraintError(msg, constraint=c)
                     model += expr
                 except Exception:
-                    if isinstance(expr, (fs.Greater, fs.Less)):
+                    if isinstance(expr, fs.Less):
                         msg = 'Strict inequalities are not supported by this solver: {}'.format(c)
                         raise ConstraintError(msg, constraint=c) from e
                     raise
