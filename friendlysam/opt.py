@@ -523,12 +523,16 @@ class Variable(_MathEnabled):
         self.ub = ub
         self.domain = domain
 
+    @property
+    def variables(self):
+        return (self,)
+
 
     def evaluate(self, replace=None, evaluators=None):
         try:
             return self._value
         except AttributeError:
-            return self
+            return replace.get(self, self)
 
 
     def take_value(self, solution):
