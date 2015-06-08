@@ -17,11 +17,12 @@ def _cbc_solve(problem):
     solver = PULP_CBC_CMD()
     return solver.solve_CBC(problem, use_mps=False)
 
+_SOLVER_FUNCS = {
+    'cbc': _cbc_solve,
+    'gurobi_cmd': GUROBI_CMD(msg=0).solve
+    }
 DEFAULT_OPTIONS = dict(
-    solver_funcs=[
-        _cbc_solve,
-        GUROBI_CMD(msg=0).solve
-    ])
+    solver=['cbc', 'gurobi_cmd'])
 
 _domain_mapping = {
     fs.Domain.real: LpContinuous,
@@ -141,15 +142,19 @@ class PulpSolver(object):
         self._last_problem_expressions = expressions
 
         exceptions = []
-        for solver_func in self.options['solver_funcs']:
+        if isinstance(self.options['solver'], str):
+            self.options['solver'] = [self.options['solver']]
+
+        for name in self.options['solver']:
             try:
-                status = solver_func(model)
+                status = _SOLVER_FUNCS[name](model)
                 break
             except Exception as e:
-                exceptions.append({'solver': solver_func, 'exception': str(e)})
+                exceptions.append({'solver': name, 'exception': str(e)})
         else:
             raise SolverError('None of the solvers worked. More info: {}'.format(exceptions))
         
+        # It would be nice to provide some more info here...
         if not status == LpStatusOptimal:
             raise fs.SolverError("pulp solution status is '{0}'".format(_pulp_statuses[status]))
 
