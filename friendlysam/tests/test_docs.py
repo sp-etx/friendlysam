@@ -13,10 +13,3 @@ def test_docs():
         failures, tests = doctest.testfile(path, optionflags=doctest.ELLIPSIS)
         if failures > 0:
             raise Exception('{} out of {} doctests failed'.format(failures, tests))
-
-def test_docstrings_in_module():
-    doctest.testmod(friendlysam)
-
-#print(friendlysam.opt)
-
-print(doctest.testmod(friendlysam.opt))
