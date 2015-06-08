@@ -2,7 +2,7 @@
 
 ## [unreleased] - unreleased
 
-## [0.2.0] - unreleased
+## [0.2.0] - 2015-06-08
 
 ### Added
 - Added the `MyopicDispatchModel`.
@@ -14,6 +14,7 @@
 - New time functionality on `Part`. See examples in `tests/test_time.py`.
 - A couple of convenience functions added for getting `list` or `pandas.Series` of values from functions like `Node.production[...]()`.
 - New optional dependency, pandas.
+- Wrote some documentation.
 
 ### Changed
 - Changed indexing convention in `VariableCollection`, `ConstraintCollection`, etc, from multi-dimensional to one-dimensional: It is now `func(index)`, not `func(*indices)`.
