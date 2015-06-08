@@ -17,7 +17,7 @@ from friendlysam.common import short_default_repr
 
 _namespace_string = ''
 
-def rename_namespace(s):
+def _prefix_namespace(s):
     global _namespace_string
     if _namespace_string == '':
         return str(s)
@@ -518,7 +518,7 @@ class Variable(_MathEnabled):
     def __init__(self, name=None, lb=None, ub=None, domain=DEFAULT_DOMAIN):
         super().__init__()
         self.name = 'x{}'.format(self._next_counter()) if name is None else name
-        self.name = rename_namespace(self.name)
+        self.name = _prefix_namespace(self.name)
         self.lb = lb
         self.ub = ub
         self.domain = domain
@@ -579,7 +579,7 @@ class VariableCollection(object):
     def __init__(self, name=None, **kwargs):
         super().__init__()
         self.name = 'X{}'.format(self._next_counter()) if name is None else name
-        self.name = rename_namespace(self.name)
+        self.name = _prefix_namespace(self.name)
         self._kwargs = kwargs
         self._vars = {}
 
