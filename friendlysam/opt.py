@@ -373,30 +373,26 @@ class Eq(Relation):
 
     _format = '{} == {}'
 
-def _is_zero(something):
-    return isinstance(something, numbers.Number) and something == 0
-
-
 class _MathEnabled(object):
     """docstring for _MathEnabled"""
 
     def __add__(self, other):
-        return self if _is_zero(other) else Add(self, other)
+        return self if other == 0 else Add(self, other)
 
     def __radd__(self, other):
-        return self if _is_zero(other) else Add(other, self)
+        return self if other == 0 else Add(other, self)
 
     def __sub__(self, other):
-        return self if _is_zero(other) else Sub(self, other)
+        return self if other == 0 else Sub(self, other)
 
     def __rsub__(self, other):
-        return -self if _is_zero(other) else Sub(other, self)
+        return -self if other == 0 else Sub(other, self)
 
     def __mul__(self, other):
-        return 0 if _is_zero(other) else Mul(self, other)
+        return 0 if other == 0 else Mul(self, other)
 
     def __rmul__(self, other):
-        return 0 if _is_zero(other) else Mul(other, self)
+        return 0 if other == 0 else Mul(other, self)
 
     def __truediv__(self, other):
         return self * (1/other) # Takes care of division by scalars at least
