@@ -102,21 +102,28 @@ class Operation(object):
 
     This is a base class. Concrete examples:
 
-    Arithmetic operations: :class:`Add`, :class:`Sub`, :class:`Mul`, :class:`Sum`
+    Arithmetic operations:
 
-    Relations: :class:`Less`, :class:`LessEqual`, :class:`Eq`
+        * Addition: :class:`Add`
+        * Subtraction: :class:`Sub`
+        * Multiplication: :class:`Mul`
+        * Summation: :class:`Sum`
+
+    Relations:
+
+        * Less than (``<``): :class:`Less`
+        * Less or equal (``<=``): :class:`LessEqual`
+        * Equals: :class:`Eq`
 
     Note:
         The :class:`Variable` class and the arithmetic operation classes have
-        overloaded operators which create :class:`Operation` instances.
+        overloaded operators which create :class:`Operation` instances. For example:
 
-    Examples:
-
-        >>> x = Variable('x')
-        >>> isinstance(x * 2, Operation)
-        True
-        >>> x + 1
-        <friendlysam.opt.Add at 0x...>
+            >>> x = Variable('x')
+            >>> isinstance(x * 2, Operation)
+            True
+            >>> x + 1
+            <friendlysam.opt.Add at 0x...>
 
     """
 
@@ -155,9 +162,9 @@ class Operation(object):
 
     @property
     def args(self):
-        """The arguments of the operation.
+        """This property holds the arguments of the operation.
 
-        See :meth:`create`.
+        See also :meth:`create`.
 
         Examples:
 
@@ -254,7 +261,7 @@ class Operation(object):
 
     @property
     def variables(self):
-        """All :attr:`leaves` which are instances of :class:`Variable`.
+        """This property gives all :attr:`leaves` which are instances of :class:`Variable`.
 
         Examples:
 
@@ -378,7 +385,7 @@ class Add(Operation, _MathEnabled):
 
 
 class Sub(Operation, _MathEnabled):
-    """Addition operator.
+    """Subtraction operator.
 
     See :class:`Operation` for a general description of operations.
 
@@ -403,7 +410,7 @@ class Sub(Operation, _MathEnabled):
         
     
 class Mul(Operation, _MathEnabled):
-    """Addition operator.
+    """Subtraction operator.
 
     See :class:`Operation` for a general description of operations.
 
