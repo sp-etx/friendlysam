@@ -54,7 +54,27 @@ class Domain(Enum):
 DEFAULT_DOMAIN = Domain.real
 
 class Operation(object):
-    """docstring for Operation"""
+    """An operation on some arguments.
+
+    This is a base class. Concrete examples:
+
+    Arithmetic operations: :class:`Add`, :class:`Sub`, :class:`Mul`, :class:`Sum`
+    Relations: :class:`Less`, :class:`LessEqual`, :class:`Eq`, :class:`GreaterEqual`,
+        :class:`Greater`
+
+    Note:
+        The :class:`Variable` class and the arithmetic operation classes have
+        overloaded operators which create :class:`Operation` instances.
+
+    Examples:
+
+        >>> x = Variable('x')
+        >>> isinstance(x * 2, Operation)
+        True
+        >>> x + 1
+        <friendlysam.opt.Add at 0x...>
+
+    """
 
     def __new__(cls, *args):
         obj = super().__new__(cls)
@@ -64,7 +84,23 @@ class Operation(object):
 
     @classmethod
     def create(cls, *args):
-        """aoeu"""
+        """Classmethod to create a new object.
+
+        This method is the default evaluator function used in :meth:`evaluate`.
+        Usually you don't want to use this function, but instead the constructor.
+
+        Args:
+            *args: The arguments the operation operates on.
+
+        Examples:
+            >>> x = Variable('x')
+            >>> args = (2, x)
+            >>> Add.create(*args) == 2 + x
+            True
+            >>> LessEqual.create(*args) == (2 <= x)
+            True
+
+        """
         return cls.__new__(cls, *args)
 
     def __hash__(self):
@@ -75,6 +111,25 @@ class Operation(object):
 
     @property
     def args(self):
+        """The arguments of the operation.
+
+        See :meth:`create`.
+
+        Examples:
+
+            >>> x, y = Variable('x'), Variable('y')
+            >>> expr = x + y
+            >>> expr
+            <friendlysam.opt.Add at 0x...>
+            >>> expr.args == (x, y)
+            True
+
+            >>> (x + y) * 2
+            <friendlysam.opt.Mul at 0x...>
+            >>> _.args
+            (<friendlysam.opt.Add at 0x...>, 2)
+
+        """
         return self._args
     
     def evaluate(self, replace=None, evaluators=None):
@@ -96,9 +151,9 @@ class Operation(object):
         Args:
             replace (dict, optional): Replacements for arguments. Arguments matching keys
                 will be replaced by specified values.
-            evaluators (dict, optional): Use these evaluators instead of the default
-                (which is the :meth:`create` classmethod of the argument's class). Arguments
-                whose ``__class__`` equals keys will be evaluated with specified function.
+            evaluators (dict, optional): Evaluating functions to use instead of the default
+                (which is the :meth:`create` classmethod of the argument's class). An argument
+                whose ``__class__`` equals a key will be evaluated with the specified function.
 
         Examples:
 
@@ -106,8 +161,12 @@ class Operation(object):
             >>> expr = x(1) + x(2)
             >>> print(expr.evaluate())
             x(1) + x(2)
-            >>> print(expr.evaluate(replace={x(2): x(3), x(1): 0}))
-            0 + x(3)
+            >>> expr.evaluate(replace={x(1): 10, x(2): 20})
+            <friendlysam.opt.Add at 0x...>
+            >>> print(_)
+            10 + 20
+            >>> expr.evaluate(replace={x(1): 10, x(2): 20}, evaluators=fs.CONCRETE_EVALUATORS)
+            30
 
         """
         if evaluators is None:
@@ -132,6 +191,17 @@ class Operation(object):
 
     @property
     def value(self):
+        """The concrete value of the expression, if possible.
+
+        This property should only be used when you expect a concrete value.
+        It is computed by calling :meth:`evaluate` with the ``evaluators`` argument
+        set to :const:`CONCRETE_EVALUATORS`. If the returned value is a number
+        or boolean, it is returned.
+
+        Raises:
+            :exc:`NoValueError` if the expression did not evaluate to a
+                number or boolean.
+        """
         evaluated = self.evaluate(evaluators=CONCRETE_EVALUATORS)
         if isinstance(evaluated, numbers.Number):
             return evaluated
@@ -140,10 +210,33 @@ class Operation(object):
 
     @property
     def variables(self):
+        """All :attr:`leaves` which are instances of :class:`Variable`.
+
+        Examples:
+
+            >>> x, y = Variable('x'), Variable('y')
+            >>> expr = (42 + x * y * 3.5) * 2
+            >>> expr.variables == {x, y}
+            True
+        """
+
         return set(l for l in self.leaves if isinstance(l, Variable))
 
     @property
     def leaves(self):
+        """The leaves of the expression tree.
+
+        The leaves of an :class:`Operation` are all the :attr:`args` which
+        do not themselves have a :attr:`leaves` property.
+
+        Examples:
+
+            >>> x, y = Variable('x'), Variable('y')
+            >>> expr = (42 + x * y * 3.5) * 2
+            >>> expr.leaves == {42, x, y, 3.5, 2}
+            True
+        """
+
         leaves = set()
         for a in self._args:
             try:
@@ -164,8 +257,6 @@ class Operation(object):
     def __str__(self):
         return self._format.format(*(self._format_arg(a) for a in self._args))
 
-    # def __repr__(self):
-    #     return '<{}.{} at {}>'.format(self.__module__, self.__class__.__name__, hex(id(self)))
     __repr__ = short_default_repr
 
     def __float__(self):
@@ -175,7 +266,15 @@ class Operation(object):
         return int(self.value)
 
 class Relation(Operation):
-    """docstring"""
+    """Base class for binary relations.
+
+    See child classes:
+
+        :class:`Less`
+        :class:`LessEqual`
+        :class:`Eq`
+
+    """
 
     _priority = 0
 
@@ -185,24 +284,93 @@ class Relation(Operation):
         raise TypeError(msg)
 
 
-    @property
-    def expr(self):
-        return self
-
 class Less(Relation):
+    '''The relation "less than".
+
+
+    Examples:
+
+        >>> x = Variable('x')
+        >>> expr = (x < 1)
+        >>> expr
+        <friendlysam.opt.Less at 0x...>
+        >>> expr == Less(x, 1)
+        True
+        >>> x.value = 1
+        >>> expr.value
+        False
+
+    Note:
+
+        There is no ``Greater`` class, but you can use
+        the overloaded operator ``>``.
+
+            >>> x > 1
+            <friendlysam.opt.Less at 0x...>
+            >>> print(_)
+            1 < x
+            >>> (x > 1) == (1 < x)
+            True
+    '''
     _format = '{} < {}'
 
 class LessEqual(Relation):
+    '''The relation "less than or equal to".
+
+    Examples:
+    
+        >>> x = Variable('x')
+        >>> expr = (x <= 1)
+        >>> expr
+        <friendlysam.opt.LessEqual at 0x...>
+        >>> expr == LessEqual(x, 1)
+        True
+        >>> x.value = 1
+        >>> expr.value
+        True
+
+    Note:
+
+        There is no ``GreaterEqual`` class, but you can use
+        the overloaded operator ``>=``.
+
+            >>> x >= 1
+            <friendlysam.opt.LessEqual at 0x...>
+            >>> print(_)
+            1 <= x
+            >>> (x >= 1) == (1 <= x)
+            True
+    '''
     _format = '{} <= {}'
 
-class GreaterEqual(Relation):
-    """docstring"""
-    _format = '{} >= {}'
-
-class Greater(Relation):
-    _format = '{} > {}'
 
 class Eq(Relation):
+    '''The relation "equals".
+
+    Warning:
+
+        This operation does not have overloaded operators for creation,
+        so instead you should use the constructor, ``Eq(a, b)``.
+
+
+    Examples:
+
+        >>> x = Variable('x')
+        >>> x == 3 # Don't do this!
+        False
+
+        >>> equality = Eq(x, 3) # Do this instead.
+        >>> equality
+        <friendlysam.opt.Eq at 0x...>
+        >>> x.value = 3
+        >>> equality.value
+        True
+        >>> x.value = 4
+        >>> equality.value
+        False
+
+    '''
+
     _format = '{} == {}'
 
 def _is_zero(something):
@@ -252,20 +420,69 @@ class _MathEnabled(object):
 
 
 class Sum(Operation, _MathEnabled):
-    """docstring for Sum"""
+    """A sum of items
+
+    See the base class :class:`Operation` for a basic description of attributes
+    and methods.
+
+    Attributes:
+        args: A tuple of items to be summed.
+
+
+    Examples:
+
+        Note that the constructor takes an iterable of arguments, just like the
+        built-in :func:`sum` function, but the classmethod :meth:`create` takes 
+        a list of arguments, as follows.
+
+            >>> x = VariableCollection('x')
+            >>> terms = [x(i) for i in range(4)]
+            >>> Sum(terms) == Sum.create(*terms)
+            True
+
+            >>> s = Sum(terms)
+            >>> s.evaluate(evaluators={Sum: sum})
+            Traceback (most recent call last):
+            ...
+            TypeError: sum expected at most 2 arguments, got 4
+
+            >>> s.evaluate(evaluators={Sum: lambda *args: sum(args)})
+            <friendlysam.opt.Add at 0x...>
+
+    """
     _priority = 1
 
     def __new__(cls, vector):
+        """Create a new Sum object
+
+        Args:
+            vector (iterable): The items to sum. Can be any iterable, also a generator,
+                and may be zero length.
+        """
         vector = tuple(vector)
         if len(vector) == 0:
             return 0
         return cls.create(*vector)
 
     def __getnewargs__(self):
+        # This is for pickling.
         return (self._args,)
 
     @classmethod
     def create(cls, *args):
+        """Classmethod to create a new Sum object.
+
+        Note that :meth:`create` has a different signature than the constructor.
+        The constructor takes an iterable as only argument, but :meth:`create`
+        takes a list of arguments.
+
+        Example:
+
+            >>> x = VariableCollection('x')
+            >>> terms = [x(i) for i in range(4)]
+            >>> Sum(terms) == Sum.create(*terms)
+            True
+        """
         return super().__new__(cls, *args)
 
 

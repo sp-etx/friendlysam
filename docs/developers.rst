@@ -55,6 +55,15 @@ The documentation for residues is made with `Sphinx <http://sphinx-doc.org/lates
 
 The resulting HTML can be previewed under ``friendlysam\docs\_build\index.html``.
 
+Run tests
+-------------
+
+Please run the tests before pushing to the master branch.
+
+To run all the tests, including doctests in the source code and doctests in this documentation, go to the project root directory and run::
+
+    nosetests --with-doctest --doctest-options=+ELLIPSIS
+
 Releasing Friendly Sam
 ---------------------------
 
