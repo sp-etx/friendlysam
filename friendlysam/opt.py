@@ -532,7 +532,10 @@ class Variable(_MathEnabled):
         try:
             return self._value
         except AttributeError:
-            return replace.get(self, self)
+            if replace:
+                return replace.get(self, self)
+            else:
+                return self
 
 
     def take_value(self, solution):
