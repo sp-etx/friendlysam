@@ -325,7 +325,7 @@ class Operation(object):
 
 
 class _MathEnabled(object):
-    """docstring for _MathEnabled"""
+    """Mixin to get all the math operators overloaded."""
 
     def __add__(self, other):
         return self if other == 0 else Add(self, other)
@@ -802,7 +802,32 @@ class Variable(_MathEnabled):
 
 
 class VariableCollection(object):
-    """docstring for VariableCollection"""
+    """A lazy collection of :class:`Variable` instances.
+
+    Use this class to create a family of variables. :class:`Variable`
+    instances are created as needed, and then kept in the collection.
+
+    Args:
+        name (str, optional): Name of the variable family.
+        **kwargs (optional): Passed on as keyword arguments to
+            :class:`Variable` constructor.
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> x
+        <friendlysam.opt.VariableCollection at 0x...: x>
+        >>> x(1)
+        <friendlysam.opt.Variable at 0x...: x(1)>
+
+        >>> x = VariableCollection('y', lb=0, domain=Domain.integer)
+        >>> x(1).lb
+        0
+        >>> x(1).domain
+        <Domain.integer: 1>
+
+    """
+
     def __init__(self, name=None, **kwargs):
         super().__init__()
         self.name = 'X{}'.format(self._next_counter()) if name is None else name
@@ -817,6 +842,29 @@ class VariableCollection(object):
         return VariableCollection._counter
 
     def __call__(self, index):
+        """Get a variable from the collection.
+
+        A :class:`VariableCollection` is callable. You call the object to get
+        a :class:`Variable` from the collection.
+
+        Args:
+            index (hashable object): The index of the requested variable.
+
+        Returns:
+            If the :class:`VariableCollection` has not been called earlier with this
+            index, creates a new :class:`Variable` instance and returns it.
+
+            If the index has been used before, the same :class:`Variable` instance
+            will be returned.
+
+        Examples:
+
+            >>> x = VariableCollection('x')
+            >>> x
+            <friendlysam.opt.VariableCollection at 0x...: x>
+            >>> x(1)
+            <friendlysam.opt.Variable at 0x...: x(1)>
+        """
         if not index in self._vars:
             name = '{}({})'.format(self.name, index)
             with namespace(''):
@@ -834,7 +882,12 @@ class VariableCollection(object):
 
 
 class ConstraintError(Exception):
-    """docstring"""
+    """
+    Raised when there is something wrong with a :class:`Constraint`.
+
+    Attributes:
+        constraint: The constraint that caused the problem.
+    """
     
     def __init__(self, *args, **kwargs):
         self.constraint = kwargs.pop('constraint', None)
@@ -856,6 +909,36 @@ class _ConstraintBase(object):
 
 
 class Constraint(_ConstraintBase):
+    """An equality or inequality constraint.
+
+    This class is used to wrap a constraint expression
+    and (optionally) add some metadata.
+
+    Args:
+        expr (:class:`Relation` instance): An equality or inequality.
+        desc (str, optional): A text describing the constraint.
+        origin (anything, optional): Some object describing where the
+            constraint comes from.
+
+    Attributes:
+        expr (``Relation`` instance)
+        desc (str)
+        origin
+        variables: read only, shorthand for ``.expr.variables``
+
+    Examples:
+
+        >>> x = Variable('x')
+        >>> c = Constraint(x + 1 <= 2 * x, desc='Some text')
+        >>> print(c)
+        <Constraint: Some text>
+        >>> c.origin = 'randomly created'
+        >>> print(c)
+        <Constraint [randomly created]: Some text>
+        >>> print(c.expr)
+        x + 1 <= 2 * x
+
+    """
     def __init__(self, expr, desc=None, origin=None):
         super().__init__(desc=desc, origin=origin)
         self.expr = expr
@@ -901,19 +984,59 @@ class _SOS(_ConstraintBase):
 
 
 class SOS1(_SOS):
-    """docstring for SOS1"""
+    """Special ordered set, type 1
+
+    An ordered set of variables, of which **at most one** may be nonzero.
+    
+    Add a :class:`SOS1` instance to an optimization problem just like a
+    :class:`Constraint` to enforce this condition.
+
+    Args:
+        variables (sequence of :class:`Variable` instances): The variables
+            in the ordered set. Must be an ordered sequence (today
+            ``list`` and ``tuple`` are allowed).
+        desc (str, optional): A text describing the constraint.
+        origin (anything, optional): Some object describing where the
+            constraint comes from.
+
+    Attributes:
+        variables
+        desc (str)
+        origin
+
+    """
     def __init__(self, variables, **kwargs):
         super().__init__(1, variables, **kwargs)
 
 
 class SOS2(_SOS):
-    """docstring for SOS2"""
+    """Special ordered set, type 2
+
+    An ordered set of variables, of which **at most two** may be nonzero,
+    and that any nonzero variables must be adjacent in order.
+
+    Add a :class:`SOS2` instance to an optimization problem just like a
+    :class:`Constraint` to enforce this condition.
+
+    Args:
+        variables (sequence of :class:`Variable` instances): The variables
+            in the ordered set. Must be an ordered sequence (today
+            ``list`` and ``tuple`` are allowed).
+        desc (str, optional): A text describing the constraint.
+        origin (anything, optional): Some object describing where the
+            constraint comes from.
+
+    Attributes:
+        variables
+        desc (str)
+        origin
+
+    """
     def __init__(self, variables, **kwargs):
         super().__init__(2, variables, **kwargs)
 
 
 class _Objective(object):
-    """docstring for _Objective"""
     def __init__(self, expr):
         super().__init__()
         self.expr = expr
@@ -924,17 +1047,120 @@ class _Objective(object):
     
 
 class Maximize(_Objective):
-    """docstring for Maximize"""
+    """A maximization objective.
+
+    Args:
+        expr (expression or :class:`Variable` instance):
+            An expression to maximize.
+
+    Attributes:
+        expr
+        variables: read only, shorthand for ``.expr.variables``
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> prob = Problem()
+        >>> prob.objective = Maximize(Sum(x(i) for i in range(50)))
+
+    """
     pass
 
 class Minimize(_Objective):
-    """docstring for Minimize"""
+    """A minimization objective.
+
+    Args:
+        expr (expression or :class:`Variable` instance):
+            An expression to minimize.
+
+    Attributes:
+        expr
+        variables: read only, shorthand for ``.expr.variables``
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> prob = Problem()
+        >>> prob.objective = Minimize(Sum(x(i) for i in range(50)))
+
+    """
     pass
 
 def dot(a, b):
+    """Make expression for the scalar product of two vectors.
+
+    ``dot(a, b)`` is equivalent to ``Sum(ai * bi for ai, bi in zip(a, b))``.
+
+    Returns:
+        An expression.
+
+    Examples:
+
+        >>> n = 10
+        >>> coefficients = (2 ** i for i in range(n))
+        >>> x = VariableCollection('x')
+        >>> vars = [x(i) for i in range(n)]
+        >>> dot(coefficients, vars)
+        <friendlysam.opt.Sum at 0x...>
+    """
     return Sum(ai * bi for ai, bi in zip(a, b))
 
 def piecewise_affine(points, name=None):
+    """Create a piecewise affine expression and constraints.
+
+    There are several ways to express piecewise affine functions in
+    MILP problems. This function helps with one of them, using SOS2 variables.
+
+    **Definition:**
+
+        :math:`f(x)` is the linear interpolation of a data set 
+        :math:`(x_0, y_0), (x_1, y_1), \ldots, (x_n, y_n)`.
+
+        The :math:`x_i` are ordered: :math:`x_0 \leq x_1 \leq \ldots \leq x_n`.
+
+        See http://en.wikipedia.org/wiki/Linear_interpolation
+
+    Args:
+        points (dict or sequence of pairs): The :math:`x_i, y_i` pairs.
+
+            **Alternative 1:** Provide a ``dict``, e.g.
+            ``{x0: y0, x1: y1, ..., x_n: y_n}``.
+
+            **Alternative 2:** Provide a sequence of pairs, e.g.
+            ``[(x0, y0), (x1, y1), ..., (xn, yn)]``
+
+            The points are automatically sorted in increasing ``x_i``.
+
+        name (str, optional): A name base for the variables.
+
+    Returns:
+        ``(x, y, constraints)``
+
+        ``x`` is an expression for the argument of the function.
+
+        ``y`` is an expression for the function value.
+
+        ``constraints`` is a set of :class:`SOS2` and :class:`Constraint`
+        instances that must be added to an optimization problem to enforce
+        the relation between ``x`` and ``y``.
+
+    Examples:
+        >>> points = {1: 30, 1.5: 20, 2: 40}
+        >>> x, y, constraints = fs.piecewise_affine(points, name='pwa_vars')
+        >>> prob = fs.Problem()
+        >>> prob.objective = fs.Minimize(y)
+        >>> prob.add(constraints)
+        >>> solution = get_solver().solve(prob)
+        >>> for var in x.variables:
+        ...     var.take_value(solution)
+        ... 
+        >>> float(x) == 1.5
+        True
+        >>> float(y) == 20
+        True
+
+    """
+
     points = dict(points).items()
     points = sorted(points, key=lambda p: p[0])
     x_vals, y_vals = zip(*points)
@@ -947,6 +1173,26 @@ def piecewise_affine(points, name=None):
     return x, y, constraints
 
 def piecewise_affine_constraints(variables, include_lb=True):
+    """Constrains for a piecewise affine expression.
+
+    For some variables :math:`x_0, x_1, \ldots, x_n`, this function creates
+
+        * A :class:`SOS2` constraint for the variables.
+        * A constraint that :math:`\sum_{i=0}^n x_i = 1`.
+        * For each variable :math:`x_i`, a constraint that :math:`x_i \geq 0`.
+
+    It is used by :func:`piecewise_affine`.
+
+    Args:
+        variables (sequence of :class:`Variable` instances)
+        include_lb (boolean, optional): If ``True`` (the default), lower bound
+            constraints ``x[i] >= 0`` are created for the variables.
+            Set to ``False`` if  your variables already have lower bounds
+            ``>= 0`` and you want to avoid a few redundant constraints.
+
+    Returns:
+        A set of :class:`SOS2` and :class:`Constraint` instances.
+    """
     variables = tuple(variables)
     return set.union(
         {
@@ -1000,9 +1246,32 @@ class Problem(object):
             raise ConstraintError('{} is not a valid constraint'.format(constraint))
         self._constraints.add(constraint)
 
-    def add(self, *additions):
-        """docstring"""
-        for constraint in additions:
+    def add(self, *constraints):
+        """Add zero or more constraints to the problem.
+
+        Args:
+            *constraints: zero or more constraints or iterables of constraints.
+                Each constraint should be an instance of :class:`Relation`,
+                :class:`Constraint`, :class:`SOS1` or :class:`SOS2`.
+
+        Note:
+
+            The syntax ``problem += constraints`` is equivalent
+            to ``problem.add(constraints).
+
+        Examples:
+
+            >>> prob = Problem()
+            >>> x = VariableCollection('x')
+
+            >>> prob.add(8 * x(1) + 4 * x(2) <= 11)
+
+            >>> prob += Constraint(x(0) <= x(1), desc='Some description')
+
+            >>> prob += ([x(i) <= i, x(i+1) <= i] for i in range(5))
+
+        """
+        for constraint in constraints:
             try:
                 for constraint in constraint:
                     self._add_constraint(constraint)
@@ -1018,6 +1287,10 @@ class Problem(object):
         return self
 
     def variables_without_value(self):
+        """Get all :class:`Variable` instances without value.
+
+        These are effectively the variables of the optimization problem.
+        """
         sources = set(self.constraints) | {self.objective}
         variables = set(chain(*(src.variables for src in sources)))
         return set(v for v in variables if not hasattr(v, 'value'))
