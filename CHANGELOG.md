@@ -5,6 +5,7 @@
 =======
 ### Fixed
 - Fixed a serious bug in `FlowNetwork`/`Node` implementation causing problems if one `Node` was connected in several `FlowNetwork`s.
+- Doctests work under Linux
 
 
 ## [0.2.0] - 2015-06-08
