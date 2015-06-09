@@ -833,10 +833,6 @@ class VariableCollection(object):
         return short_default_repr(self, desc=str(self))
 
 
-    def __truediv__(self, other):
-        raise fs.InsanityError().with_traceback(sys.exc_info()[2])
-
-
 class ConstraintError(Exception):
     """docstring"""
     
@@ -860,15 +856,15 @@ class _ConstraintBase(object):
 
 
 class Constraint(_ConstraintBase):
-    """docstring for Constraint"""
-    def __init__(self, expr, desc=None, **kwargs):
-        super().__init__(desc=desc, **kwargs)
+    def __init__(self, expr, desc=None, origin=None):
+        super().__init__(desc=desc, origin=origin)
         self.expr = expr
+        self.origin = origin
 
     def __str__(self):
         if self.desc or self.origin:
             if self.origin:
-                origin_text = ' from ' + str(self.origin)
+                origin_text = ' [{}]'.format(self.origin)
             else:
                 origin_text = ''
             return '<Constraint{}: {}>'.format(origin_text, self.desc)
@@ -951,6 +947,7 @@ def piecewise_affine(points, name=None):
     return x, y, constraints
 
 def piecewise_affine_constraints(variables, include_lb=True):
+    variables = tuple(variables)
     return set.union(
         {
             SOS2(variables, desc='Picewise affine'),
@@ -962,11 +959,39 @@ def piecewise_affine_constraints(variables, include_lb=True):
 
 
 class Problem(object):
-    """An optimization problem"""
-    def __init__(self, constraints=None, objective=None):
+    """An optimization problem.
+
+    The problem class is essentially a container for an objective
+    function and a set of constraints.
+
+    Attributes:
+        objective: The objective function of the optimization problem,
+            represented by a :class:`Maximize` or :class:`Minimize` instance.
+
+        constraints: Read only. A set of constraints.
+
+    Examples:
+
+        >>> x = VariableCollection('x')
+        >>> prob = Problem()
+        >>> prob.objective = Maximize(x(1) + x(2))
+        >>> prob.add(8 * x(1) + 4 * x(2) <= 11)
+        >>> prob.add(2 * x(1) + 4 * x(2) <= 5)
+        >>> 
+        >>> # Get a solver and solve the problem
+        >>> solver = fs.get_solver()
+        >>> solution = solver.solve(prob)
+        >>> type(solution)
+        <class 'dict'>
+        >>> solution[x(1)]
+        1.0
+        >>> solution[x(2)]
+        0.75
+
+    """
+    def __init__(self):
         super().__init__()
-        self._constraints = set() if constraints is None else constraints
-        self.objective = objective
+        self._constraints = set()
 
     def _add_constraint(self, constraint):
         if isinstance(constraint, Relation):
@@ -1001,9 +1026,6 @@ class Problem(object):
     def constraints(self):
         return self._constraints
 
-    def solve(self):
-        """Try to solve the optimization problem"""
-        raise NotImplementedError()
 
 CONCRETE_EVALUATORS = {
     Eq: operator.eq,
