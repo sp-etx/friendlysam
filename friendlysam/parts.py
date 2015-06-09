@@ -202,23 +202,12 @@ class Node(Part):
         self.consumption = dict()
         self.production = dict()
         self.accumulation = dict()
-
-        self._inflows = set()
-        self._outflows = set()
+        self.inflows = defaultdict(set)
+        self.outflows = defaultdict(set)
 
         self._clusters = dict()
 
-        self.constraints += self._all_balance_constraints
-
-
-    @property
-    def inflows(self):
-        return self._inflows
-
-
-    @property
-    def outflows(self):
-        return self._outflows
+        self.constraints += self.balance_constraints
 
 
     def set_cluster(self, cluster):
@@ -249,8 +238,8 @@ class Node(Part):
 
 
     def _balance_constraint(self, resource, index):
-        inflow = fs.Sum(flow(index) for flow in self._inflows)
-        outflow = fs.Sum(flow(index) for flow in self._outflows)
+        inflow = fs.Sum(flow(index) for flow in self.inflows[resource])
+        outflow = fs.Sum(flow(index) for flow in self.outflows[resource])
 
         lhs = inflow
         rhs = outflow
@@ -272,7 +261,7 @@ class Node(Part):
         balance_dicts = (self.consumption, self.production, self.accumulation)
         return set(chain(*(d.keys() for d in balance_dicts)))
 
-    def _all_balance_constraints(self, index):
+    def balance_constraints(self, index):
         # Enforce balance constraints for all resources, except those resources
         # which this node is in a cluster for. The cluster instead makes an aggregated
         # balance constraint for those.
@@ -405,8 +394,8 @@ class FlowNetwork(Part):
             with namespace(self):
                 flow = VariableCollection(name, lb=0)
             self._flows[(n1, n2)] = flow
-            n1.outflows.add(flow)
-            n2.inflows.add(flow)
+            n1.outflows[self.resource].add(flow)
+            n2.inflows[self.resource].add(flow)
 
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
