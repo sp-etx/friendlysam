@@ -33,11 +33,11 @@ If you are developing the source code of Friendly Sam, you probably want to inst
     
     2. Go into your virtual environment (e.g. ``vex my_project_name cmd``).
     
-    3. (option a) Do this::
+    3. (option a) Do this if you have an **.exe file**::
 
         easy_install numpy-MKL-1.9.0.win-amd64-py3.4.exe
 
-    3. (option b) Or, if you have a wheels file e.g. ``numpy-1.9.2+mkl-cp34-none-win_amd64.whl``, do this::
+    3. (option b) Or, if you have a **.whl file** file, e.g. ``numpy-1.9.2+mkl-cp34-none-win_amd64.whl``, do this::
 
         pip install numpy-1.9.2+mkl-cp34-none-win_amd64.whl
 
