@@ -4,7 +4,7 @@ import sys
 import logging
 logger = logging.getLogger(__name__)
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from itertools import chain
 
 import networkx as nx
@@ -24,34 +24,27 @@ class ConstraintCollection(object):
         self._owner = owner
         self._constraint_funcs = set()
 
-    def _prepare(self, constraint, origin_desc):
-        if isinstance(constraint, fs.Relation):
-            constraint = Constraint(constraint)
-
-        if not isinstance(constraint, Constraint):
-            raise ValueError('cannot handle constraint {}'.format(constraint))
-
-        if constraint.origin is None:
-            constraint.origin = '{}, {}'.format(self._owner, origin_desc)
-
-        return constraint
-
-    def _func_description(self, func, index):
-        func_desc = func.__name__
-        return '{}({})'.format(func_desc, index)
+    _origin_tuple = namedtuple('CallTo', ['func', 'index'])
 
     def __call__(self, index, **kwargs):
         constraints = set()
 
         for func in self._constraint_funcs:
+            origin = self._origin_tuple(func=func, index=index)
             func_output = func(index)
             try:
                 func_output = iter(func_output)
             except TypeError: # not iterable
                 func_output = (func_output,)
 
-            func_desc = self._func_description(func, index)
-            constraints.update(self._prepare(item, func_desc) for item in func_output)
+            for constraint in func_output:
+                if isinstance(constraint, fs.Relation):
+                    constraint = Constraint(constraint)
+
+                if constraint.origin is None:
+                    constraint.origin = origin
+
+                constraints.add(constraint)
 
         return constraints
 
