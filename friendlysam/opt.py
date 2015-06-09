@@ -1191,7 +1191,8 @@ def piecewise_affine_constraints(variables, include_lb=True):
             ``>= 0`` and you want to avoid a few redundant constraints.
 
     Returns:
-        A set of :class:`SOS2` and :class:`Constraint` instances.
+
+        set: A set of :class:`SOS2` and :class:`Constraint` instances.
     """
     variables = tuple(variables)
     return set.union(
