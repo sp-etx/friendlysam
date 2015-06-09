@@ -37,9 +37,9 @@ If you are developing the source code of Friendly Sam, you probably want to inst
 
         easy_install numpy-MKL-1.9.0.win-amd64-py3.4.exe
 
-    3. (option b) Or, if you have a wheels file ``something.whl``, do this::
+    3. (option b) Or, if you have a wheels file e.g. ``numpy-1.9.2+mkl-cp34-none-win_amd64.whl``, do this::
 
-        pip install something.whl
+        pip install numpy-1.9.2+mkl-cp34-none-win_amd64.whl
 
 
 Make Sphinx documentation

@@ -82,6 +82,13 @@ class Domain(Enum):
 
     Examples:
 
+        >>> for d in Domain:
+        ...     print(d)
+        ...
+        Domain.real
+        Domain.integer
+        Domain.binary
+
         >>> s = get_solver()
         >>> prob = Problem()
         >>> x = Variable('x', domain=Domain.integer)
