@@ -875,6 +875,75 @@ class VariableCollection(object):
             self._vars[index] = variable
         return self._vars[index]
 
+    def _update_var_kwargs(self, key, value):
+        self._kwargs[key] = value
+
+
+    @property
+    def ub(self):
+        """Gets the upper bound of the contained variables.
+
+        Warning:
+
+            Gets the upper bound stored on the VariableCollection. The value
+            on individual variables may have been changed individually.
+        """
+        return self._kwargs['ub']
+
+    @ub.setter
+    def ub(self, value):
+        """Sets the upper bound of the contained variables.
+
+        Warning:
+
+            Overrides the value on all existing variables in the collection.
+        """
+        self._update_var_kwargs('ub', value)
+
+
+    @property
+    def lb(self):
+        """Gets the lower bound of the contained variables.
+
+        Warning:
+
+            Gets the upper bound stored on the VariableCollection. The value
+            on individual variables may have been changed individually.
+        """
+        return self._kwargs['lb']
+
+    @lb.setter
+    def lb(self, value):
+        """Sets the lower bound of the contained variables.
+
+        Warning:
+
+            Overrides the value on all existing variables in the collection.
+        """
+        self._update_var_kwargs('lb', value)
+
+
+    @property
+    def domain(self):
+        """Gets the domain of the contained variables.
+
+        Warning:
+
+            Gets the domain stored on the VariableCollection. The value
+            on individual variables may have been changed individually.
+        """
+        return self._kwargs['domain']
+
+    @domain.setter
+    def domain(self, value):
+        """Sets the domain of the contained variables.
+
+        Warning:
+
+            Overrides the value on all existing variables in the collection.
+        """
+        self._update_var_kwargs('domain', value)
+
 
     def __str__(self):
         return self.name

@@ -3,6 +3,10 @@
 ## [unreleased] - unreleased
 
 =======
+
+### Added
+ - Added `ub`, `lb`, and `domain` to `VariableCollection`.
+
 ### Fixed
 - Fixed a serious bug in `FlowNetwork`/`Node` implementation causing problems if one `Node` was connected in several `FlowNetwork`s.
 - Doctests work under Linux
