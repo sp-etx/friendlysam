@@ -254,7 +254,8 @@ class Node(Part):
 
     @property
     def resources(self):
-        balance_dicts = (self.consumption, self.production, self.accumulation)
+        balance_dicts = (
+            self.consumption, self.production, self.accumulation, self.inflows, self.outflows)
         return set(chain(*(d.keys() for d in balance_dicts)))
 
     def balance_constraints(self, index):
