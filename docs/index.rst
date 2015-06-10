@@ -36,7 +36,7 @@ Contents:
    more-about-constraints(adding own constraints, SOS, nice ways to express with product, ...)
    advanced-time
    example-model
-   reference
+   apidoc/friendlysam
 
 
 Indices and tables

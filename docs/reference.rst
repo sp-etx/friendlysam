@@ -6,6 +6,7 @@ friendlysam.opt
 
 .. automodule:: friendlysam.opt
     :members:
+    :inherited-members:
 
 
 friendlysam.parts
@@ -13,6 +14,7 @@ friendlysam.parts
 
 .. automodule:: friendlysam.parts
     :members:
+    :show-inheritance:
 
 
 friendlysam.models

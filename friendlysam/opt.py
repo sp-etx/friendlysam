@@ -457,9 +457,6 @@ class Sum(Operation, _MathEnabled):
     See the base class :class:`Operation` for a basic description of attributes
     and methods.
 
-    Attributes:
-        args: A tuple of items to be summed.
-
     Examples:
 
         Note that the constructor takes an iterable of arguments, just like the
@@ -957,12 +954,16 @@ class ConstraintError(Exception):
     """
     Raised when there is something wrong with a :class:`Constraint`.
 
-    Attributes:
-        constraint: The constraint that caused the problem.
+    Args:
+        constraint (optional): The constraint that caused the problem.
+        *args: Passed on to parent exception constructor.
+        **kwargs: Passed on to parent exception constructor.
     """
-    
-    def __init__(self, *args, **kwargs):
-        self.constraint = kwargs.pop('constraint', None)
+
+    def __init__(self, *args, constraint=None, **kwargs):
+        self.constraint = constraint
+        """The constraint that caused the problem."""
+
         super().__init__(*args, **kwargs)
 
 
@@ -972,6 +973,25 @@ class _ConstraintBase(object):
         super().__init__()
         self.desc = desc
         self.origin = origin
+
+    @property
+    def desc(self):
+        """A description of the constraint, for debugging."""
+        return self._desc
+    @desc.setter
+    def desc(self, value):
+        self._desc = value
+
+    @property
+    def origin(self):
+        """The origin of the description.
+
+        Can be any object. Supposed to indicate where the constraint
+        comes from, for debugging."""
+        return self._origin
+    @origin.setter
+    def origin(self, value):
+        self._origin = value
 
     @property
     def variables(self):
@@ -992,12 +1012,6 @@ class Constraint(_ConstraintBase):
         origin (anything, optional): Some object describing where the
             constraint comes from.
 
-    Attributes:
-        expr (``Relation`` instance)
-        desc (str)
-        origin
-        variables: read only, shorthand for ``.expr.variables``
-
     Examples:
 
         >>> x = Variable('x')
@@ -1014,7 +1028,7 @@ class Constraint(_ConstraintBase):
     def __init__(self, expr, desc=None, origin=None):
         super().__init__(desc=desc, origin=origin)
         self.expr = expr
-        self.origin = origin
+        """An expression (``Relation`` instance)."""
 
     def __str__(self):
         if self.desc or self.origin:
@@ -1028,11 +1042,20 @@ class Constraint(_ConstraintBase):
 
     @property
     def long_description(self):
+        """A long, human-readable string representation of the constraint.
+
+        The description includes the ``repr()`` of the :class:`Constraint`,
+        the :attr:`desc`, and the :attr:`origin`.
+
+        It is broken into three lines.
+        """
+
         return '{}\nDescription: {}\nOrigin: {}'.format(repr(self), self.desc, self.origin)
 
 
     @property
     def variables(self):
+        """Read only property, shorthand for ``.expr.variables``"""
         return self.expr.variables
     
 
@@ -1048,6 +1071,7 @@ class _SOS(_ConstraintBase):
 
     @property
     def level(self):
+        """A number indicating SOS1 (level=1) or SOS2 (level=2)."""
         return self._level
     
 
@@ -1056,6 +1080,7 @@ class _SOS(_ConstraintBase):
 
     @property
     def variables(self):
+        """The ordered list of variables as a tuple."""
         return self._variables
 
 
@@ -1074,11 +1099,6 @@ class SOS1(_SOS):
         desc (str, optional): A text describing the constraint.
         origin (anything, optional): Some object describing where the
             constraint comes from.
-
-    Attributes:
-        variables
-        desc (str)
-        origin
 
     """
     def __init__(self, variables, **kwargs):
@@ -1102,11 +1122,6 @@ class SOS2(_SOS):
         origin (anything, optional): Some object describing where the
             constraint comes from.
 
-    Attributes:
-        variables
-        desc (str)
-        origin
-
     """
     def __init__(self, variables, **kwargs):
         super().__init__(2, variables, **kwargs)
@@ -1119,6 +1134,7 @@ class _Objective(object):
 
     @property
     def variables(self):
+        """Read only property, shorthand for ``.expr.variables``"""
         return self.expr.variables
     
 
@@ -1129,10 +1145,6 @@ class Maximize(_Objective):
         expr (expression or :class:`Variable` instance):
             An expression to maximize.
 
-    Attributes:
-        expr
-        variables: read only, shorthand for ``.expr.variables``
-
     Examples:
 
         >>> x = VariableCollection('x')
@@ -1140,7 +1152,8 @@ class Maximize(_Objective):
         >>> prob.objective = Maximize(Sum(x(i) for i in range(50)))
 
     """
-    pass
+    expr = None
+    """The expression to maximize."""
 
 class Minimize(_Objective):
     """A minimization objective.
@@ -1149,10 +1162,6 @@ class Minimize(_Objective):
         expr (expression or :class:`Variable` instance):
             An expression to minimize.
 
-    Attributes:
-        expr
-        variables: read only, shorthand for ``.expr.variables``
-
     Examples:
 
         >>> x = VariableCollection('x')
@@ -1160,7 +1169,8 @@ class Minimize(_Objective):
         >>> prob.objective = Minimize(Sum(x(i) for i in range(50)))
 
     """
-    pass
+    expr = None
+    """The expression to minimize."""
 
 def dot(a, b):
     """Make expression for the scalar product of two vectors.
@@ -1287,12 +1297,6 @@ class Problem(object):
     The problem class is essentially a container for an objective
     function and a set of constraints.
 
-    Attributes:
-        objective: The objective function of the optimization problem,
-            represented by a :class:`Maximize` or :class:`Minimize` instance.
-
-        constraints: Read only. A set of constraints.
-
     Examples:
 
         >>> x = VariableCollection('x')
@@ -1316,6 +1320,18 @@ class Problem(object):
         super().__init__()
         self._constraints = set()
 
+    @property
+    def objective(self):
+        return self._objective
+    
+    @objective.setter
+    def objective(self, value):
+        """
+        The objective function of the optimization problem
+        represented by a :class:`Maximize` or :class:`Minimize` instance.
+        """
+        self._objective = value
+    
     def _add_constraint(self, constraint):
         if isinstance(constraint, Relation):
             constraint = Constraint(constraint, 'Ad hoc constraint')
@@ -1374,6 +1390,10 @@ class Problem(object):
 
     @property
     def constraints(self):
+        """A set of constraints.
+
+        To add constraints, use :meth:`Problem.add`.
+        """
         return self._constraints
 
 
