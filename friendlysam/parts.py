@@ -384,21 +384,25 @@ class FlowNetwork(Part):
     def remove_part(self, part):
         raise NotImplementedError('need to also remove edges then')
 
-    def connect(self, n1, n2, bidirectional=False):
+    def connect(self, n1, n2, bidirectional=False, capacity=None):
+        """docstring"""
         edges = self._graph.edges()
             
         if not (n1, n2) in edges:
             self.add_parts(n1, n2)
             self._graph.add_edge(n1, n2)
-            name = 'flow ({} --> {})'.format(n1, n2)
+            name = 'flow({}-->{})'.format(n1, n2)
             with namespace(self):
-                flow = VariableCollection(name, lb=0)
+                flow = VariableCollection(name, lb=0, ub=capacity)
             self._flows[(n1, n2)] = flow
             n1.outflows[self.resource].add(flow)
             n2.inflows[self.resource].add(flow)
 
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
+
+    def get_flow(self, n1, n2):
+        return self._flows[n1, n2]
 
     def state_variables(self, index):
         return tuple(var(index) for var in self._flows.values())

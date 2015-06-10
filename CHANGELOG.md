@@ -7,6 +7,8 @@
 ### Added
  - Added `ub`, `lb`, and `domain` to `VariableCollection`.
  - Added `long_description` to `Constraint`.
+ - Added `capacity` keyword arg to `FlowNetwork.connect()`.
+ - Added `FlowNetwork.get_flow()` method.
 
 ### Changed
  - Moved some `__init__` code to `__new__` to simplify inheritance of e.g. `Node`.
