@@ -8,6 +8,9 @@
  - Added `ub`, `lb`, and `domain` to `VariableCollection`.
  - Added `long_description` to `Constraint`.
 
+### Changed
+ - Moved some `__init__` code to `__new__` to simplify inheritance of e.g. `Node`.
+
 ### Fixed
 - Fixed a serious bug in `FlowNetwork`/`Node` implementation causing problems if one `Node` was connected in several `FlowNetwork`s.
 - Doctests work under Linux

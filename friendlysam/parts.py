@@ -70,18 +70,19 @@ class Part(object):
 
     _subclass_counters = defaultdict(int)
 
-    def __init__(self, name=None):
-        self._constraints = ConstraintCollection(self)
-        self._model = None
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls)
         self._subclass_counters[type(self)] += 1
-        
-        if name is None:
-            name = '{}{:04d}'.format(type(self).__name__, self._subclass_counters[type(self)])
-        self.name = name
-
-        self.time_unit = 1
-
+        self._constraints = ConstraintCollection(self)
         self._parts = set()
+        self.time_unit = 1
+        self.name = '{}{:04d}'.format(type(self).__name__, self._subclass_counters[type(self)])
+        return self
+
+    def __init__(self, name=None):
+        if name is not None:
+            self.name = name
+
 
     def step_time(self, index, step):
         return index + self.time_unit * step
@@ -190,17 +191,19 @@ class Part(object):
 
 class Node(Part):
     """docstring for Node"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls, *args, **kwargs)
         self.consumption = dict()
         self.production = dict()
         self.accumulation = dict()
         self.inflows = defaultdict(set)
         self.outflows = defaultdict(set)
-
         self._clusters = dict()
 
         self.constraints += self.balance_constraints
+
+        return self
 
 
     def set_cluster(self, cluster):
@@ -265,9 +268,12 @@ class Node(Part):
 class Cluster(Node):
     """docstring for Cluster"""
     
-    def __init__(self, *parts, **kwargs):
-        self._resource = kwargs.pop('resource')
-        super().__init__(**kwargs)
+    def __init__(self, *parts, resource=None, name=None):
+        super().__init__(name=name)
+        if resource is None:
+            msg = '{} is not a valid resource'.format(resource)
+            raise ValueError(msg).with_traceback(sys.exc_info()[2])
+        self._resource = resource
         self.add_parts(*parts)
 
         self.consumption[self._resource] = self._get_aggr_func('consumption')
@@ -330,8 +336,8 @@ class Cluster(Node):
 
 class Storage(Node):
     """docstring for Storage"""
-    def __init__(self, resource, capacity=None, maxchange=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, resource, capacity=None, maxchange=None, name=None):
+        super().__init__(name=None)
         self.resource = resource
         self.capacity = capacity
         self.maxchange = maxchange
