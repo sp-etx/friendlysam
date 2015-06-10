@@ -1088,8 +1088,8 @@ class SOS1(_SOS):
 class SOS2(_SOS):
     """Special ordered set, type 2
 
-    An ordered set of variables, of which **at most two** may be nonzero,
-    and that any nonzero variables must be adjacent in order.
+    An ordered set of variables, of which **at most two** may be nonzero.
+    Any nonzero variables must be adjacent in order.
 
     Add a :class:`SOS2` instance to an optimization problem just like a
     :class:`Constraint` to enforce this condition.
