@@ -1026,6 +1026,10 @@ class Constraint(_ConstraintBase):
         else:
             return repr(self)
 
+    @property
+    def long_description(self):
+        return '{}\nDescription: {}\nOrigin: {}'.format(repr(self), self.desc, self.origin)
+
 
     @property
     def variables(self):
