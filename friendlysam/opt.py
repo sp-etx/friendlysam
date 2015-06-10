@@ -491,8 +491,6 @@ class Sum(Operation, _MathEnabled):
                 and may be zero length.
         """
         vector = tuple(vector)
-        if len(vector) == 0:
-            return 0
         return cls.create(*vector)
 
     def __getnewargs__(self):
@@ -514,6 +512,11 @@ class Sum(Operation, _MathEnabled):
             >>> Sum(terms) == Sum.create(*terms)
             True
         """
+
+        if len(args) == 0:
+            return 0
+        if len(args) == 1:
+            return args[0]
         return super().__new__(cls, *args)
 
 
