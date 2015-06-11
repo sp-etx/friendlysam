@@ -39,7 +39,19 @@ class ConstraintCollection(object):
     _origin_tuple = namedtuple('CallTo', ['func', 'index', 'owner'])
 
     def __call__(self, index):
-        """Create constraints from contained functions."""
+        """Create constraints from contained functions.
+
+        Args:
+            index: The index to call the constraint functions with.
+
+        Examples:
+
+            c = ConstraintCollection(owner)
+            c.add(func1)
+            c += func2 # Alternative syntax.
+            c(index) # Returns a set with all the constraints from func1 and func2
+
+        """
         constraints = set()
 
         for func in self._constraint_funcs:
@@ -69,11 +81,16 @@ class ConstraintCollection(object):
     def add(self, addition):
         """Add a constraint function, or an iterable of constraint functions.
 
-        Alternative syntax::
+        Args:
+            addition (callable or iterable of callables): Constraint function(s)
+                to add.
+
+        Examples:
 
             c = ConstraintCollection(owner)
             c.add(constraint_func)
             c.add([func1, func2])
+
             c += constraint_func
             c += [func1, func2]
         """
@@ -111,9 +128,12 @@ class Part(object):
             * :meth:`times` and :meth:`iter_times`
             * :meth:`times_between` and :meth:`iter_times_between`
 
+    Args:
+        name (str, optional): A name for the part.
+
     Examples:
 
-        >>> 
+        See :class:`Node`.
 
     """
 
@@ -342,20 +362,74 @@ class Part(object):
 
     @property
     def constraints(self):
-        """An aggregator for constraint functions.
+        '''An aggregator for constraint functions.
 
-        Add functions or iterables of functions to it. Each function
+        This is a :class:`ConstraintCollection` instance. Add functions or 
+        iterables of functions to it. Each function
         should return a constraint or an iterable of constraints.
-
-        In this context, a constraint is :class:`~friendlysam.opt.Constraint`,
+        (In this context, a constraint is :class:`~friendlysam.opt.Constraint`,
         :class:`~friendlysam.opt.Relation`, :class:`~friendlysam.opt.SOS1` or
-        :class:`~friendlysam.opt.SOS2`.
+        :class:`~friendlysam.opt.SOS2`.)
+
+        If a constraint function returns a :class:`~friendlysam.opt.Relation`,
+        it automatically packaged in a :class:`~friendlysam.opt.Constraint` object
+        and marked with :attr:`~friendlysam.opt.Constraint.origin` after creation.
+        A constraint function may also return an iterable of constraints,
+        even a generator.
+
+        All the added constraint functions are called when :meth:`constraints`
+        is called.
 
         Examples:
 
-            >>> to be continued
+            There are many ways to formulate constraint functions. Here
+            is a wonderfully contrived example:
 
-        """
+            >>> from friendlysam.opt import VariableCollection, Constraint, Eq
+            >>> class MyNode(Node):
+            ...     def __init__(self, k):
+            ...         self.k = k
+            ...         self.var = VariableCollection('x')
+            ...         self.production['foo'] = self.var
+            ...         # += and .add() are just alternative syntaxes
+            ...         self.constraints.add(lambda t: self.var(t) >= k[t] - 1)
+            ...         self.constraints += self.constraint_func_1, self.constraint_func_2
+            ...         self.constraints.add(self.constraint_func_3)
+            ...
+            ...     def constraint_func_1(self, t):
+            ...         return Constraint(
+            ...             self.var(t) <= self.k[t] * 2,
+            ...             desc='Some description')
+            ...
+            ...     def constraint_func_2(self, t):
+            ...         constraints = []
+            ...         t_plus_1 = self.step_time(t, 1)
+            ...         constraints.append(self.var(t) <= self.k[t] * self.var(t_plus_1))
+            ...         constraints.append(self.var(t) >= self.k[t_plus_1] * self.var(t_plus_1))
+            ...         return constraints
+            ...
+            ...     def constraint_func_3(self, t):
+            ...         for prev in self.times_between(0, t):
+            ...             expr = Eq(self.k[prev] * self.var(prev), self.k[t] * self.var(t))
+            ...             desc = 'Why make such a constraint? (k(t)={})'.format(self.k[t])
+            ...             yield Constraint(expr, desc=desc)
+            ...
+            >>> my_k = {i: i ** 2.4 for i in range(100)}
+            >>> node = MyNode(my_k)
+            >>> constraints = node.constraints(20)
+            >>> len(constraints)
+            26
+
+
+            Constraints can also be added from "outside":
+
+            >>> node.constraints += lambda index: node.production['foo'](index) >= index
+            >>> constraints = node.constraints(20)
+            >>> len(constraints)
+            27
+
+            '''
+
         return self._constraints
 
     @constraints.setter
@@ -374,6 +448,20 @@ class Part(object):
 
 
     def find(self, name):
+        """Try to find a part by name.
+
+        Searches among :attr:`descendants_and_self`, comparing the :attr:`name`.
+        If there is exactly one match, it is returned.
+
+        Args:
+            name: The name to search for.
+
+        Returns:
+            A part named ``name``, if one exists among :attr:`descendants_and_self`.
+
+        Raises:
+            ValueError: If there is no match or several matches.
+        """
         matches = [part for part in self.descendants_and_self if part.name == name]
         if len(matches) == 1:
             return matches[0]
@@ -385,6 +473,20 @@ class Part(object):
 
 
     def parts(self, depth='inf', include_self=True):
+        """Get contained parts, recursively.
+
+        See also properties :attr:`children`, :attr:`children_and_self`,
+        :attr:`descendants`, :attr:`descendants_and_self`.
+
+        Args:
+            depth (integer or 'inf', optional): The recursion depth to search with.
+                depth=1 searches among the parts directly contained by this part.
+                depth=2 among children and their children, etc.
+            include_self (boolean, optional): Include this part in the results?
+
+        Returns:
+            A set of parts.
+        """
         parts = set()
         depth = float(depth)
 
@@ -400,46 +502,115 @@ class Part(object):
 
     @property    
     def children(self):
+        """Parts in this part, excluding ``self``."""
         return self.parts(depth=1, include_self=False)
 
     @property
     def children_and_self(self):
+        """Parts in this part, including ``self``."""
         return self.parts(depth=1, include_self=True)
 
     @property
     def descendants(self):
+        """All children, children of children, etc, excluding ``self``."""
         return self.parts(depth='inf', include_self=False)
 
     @property
     def descendants_and_self(self):
+        """All children, children of children, etc, including ``self``."""
         return self.parts(depth='inf', include_self=True)
 
 
-    def add_part(self, p):
-        if self in p.descendants_and_self:
+    def add_part(self, part):
+        """Add a part to this part.
+
+        Args:
+            part (:class:`Part` or subclass instance): The part to add.
+
+        Raises:
+            InsanityError: If the calling part is a descendant of the part to add.
+                (This would generate a cyclic relationship.)
+        """
+        if self in part.descendants_and_self:
             raise InsanityError(
                 ('cannot add {} to {} because it would '
-                'generate a cyclic relationship').format(p, self))
+                'generate a cyclic relationship').format(part, self))
 
-        self._parts.add(p)
+        self._parts.add(part)
 
 
-    def remove_part(self, p):
+    def remove_part(self, part):
+        """Remove a part from self this part.
+
+        Args:
+            p (:class:`Part` or subclass instance): The part to remove.
+
+        Raises:
+            KeyError: If the part is not there.
+        """
         with ignored(KeyError):
-            self._parts.remove(p)
-
-
-    def add_parts(self, *parts):
-        for p in parts:
-            self.add_part(p)
+            self._parts.remove(part)
 
 
     def state_variables(self, index):
+        """The state variables of the part.
+
+        Each subclass may define :meth:`state_variables`, returning
+        an iterable of the :class:`Varible` instances that define the state
+        of the part at the specified index.
+
+        :class:`friendlysam.models.MyopicDispatchModel` is an example
+        of how it can be used.
+
+        Args:
+            index: The index of the state.
+
+        Examples:
+
+            >>> from friendlysam import VariableCollection, Domain
+            >>> class ChocolateFactory(Node):
+            ...     def __init__(self):
+            ...         self.total = VariableCollection('total production')
+            ...         self.mc = VariableCollection('milk chocolate production')
+            ...         self.production['dark chocolate'] = lambda t: self.total(t) - self.mc(t)
+            ...         self.production['milk chocolate'] = self.mc
+            ...         
+            ...     def state_variables(self, t):
+            ...         return (self.total, self.mc)
+
+        """
         msg = "{} has not defined state_variables".format(repr(self))
         raise AttributeError(msg).with_traceback(sys.exc_info()[2])
 
 class Node(Part):
-    """docstring for Node"""
+    """A node with balance constraints.
+
+    Suitable for modeling nodes in a flow network.
+
+    A :class:`Node` instance produces balance constraints
+    for all its :attr:`resources`.
+
+    Args:
+        name (str, optional): A name for the node.
+
+    Examples:
+
+        >>> class PowerPlant(Node):
+        ...     def __init__(self, efficiency):
+        ...         with namespace(self):
+        ...             x = VariableCollection('output')
+        ...         self.production['power'] = x
+        ...         self.consumption['fuel'] = lambda t: x(t) / efficiency
+        ...
+        >>> power_plant = PowerPlant(0.85)
+        >>> constraints = power_plant.constraints(42)
+        >>> constraints
+        {<friendlysam.opt.Constraint at 0x...>, <friendlysam.opt.Constraint at 0x...>}
+        >>> {c.desc for c in constraints} == {'Balance constraint (resource=power)',
+        ...                                   'Balance constraint (resource=fuel)'}
+        True
+
+    """
 
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, *args, **kwargs)
@@ -454,8 +625,19 @@ class Node(Part):
 
         return self
 
+    def __init__(self, name=None):
+        if name is not None:
+            self.name = name
+
 
     def set_cluster(self, cluster):
+        """Add this node to a :class:`Cluster`.
+
+        Use :meth:`Cluster.add_part` instead.
+
+        Args:
+            cluster: The :node:`Cluster` instance to add to.
+        """
         res = cluster.resource
         if res in self._clusters:
             if self._clusters[res] is not cluster:
@@ -470,6 +652,13 @@ class Node(Part):
 
 
     def unset_cluster(self, cluster):
+        """Remove from a :class:`Cluster`.
+
+        Use :meth:`Cluster.add_part` instead.
+
+        Args:
+            cluster: The :node:`Cluster` instance to remove from.
+        """
         res = cluster.resource
         if not (res in self._clusters and self._clusters[res] is cluster):
             raise InsanityError('cannot unset Cluster {} because it is not set'.format(cluster))        
@@ -479,6 +668,16 @@ class Node(Part):
 
 
     def cluster(self, resource):
+        """Get a :class:`Cluster` this node is in.
+
+        Args:
+            resource: The :attr:`Cluster.resource`.
+
+        Returns:
+            cluster: The Cluster if this node is in a
+            :class:`Cluster` with :attr:`Cluster.resource``` == resource``,
+            None otherwise.
+        """
         return self._clusters.get(resource, None)
 
 
@@ -503,11 +702,32 @@ class Node(Part):
 
     @property
     def resources(self):
+        """The set of resources this node handles.
+
+        A set containing all the keys of the dictionaries:
+
+            * :attr:`consumption`
+            * :attr:`production`
+            * :attr:`accumulation`
+            * :attr:`inflows`
+            * :attr:`outflows`
+        """
         balance_dicts = (
             self.consumption, self.production, self.accumulation, self.inflows, self.outflows)
         return set(chain(*(d.keys() for d in balance_dicts)))
 
     def balance_constraints(self, index):
+        """Balance constraints for all resources.
+
+        Returns one constraint for each resource in :attr:`resources`,
+        except for the resources for which this node is in a :class:`Cluster`.
+
+        Args:
+            index: The index to get the resources for.
+
+        Returns:
+            set: The balance constraints.
+        """
         # Enforce balance constraints for all resources, except those resources
         # which this node is in a cluster for. The cluster instead makes an aggregated
         # balance constraint for those.
@@ -516,7 +736,26 @@ class Node(Part):
 
 
 class Cluster(Node):
-    """docstring for Cluster"""
+    """A node containing other nodes, fully connected.
+
+    A cluster is used to create a free flow of a resource ``R`` among
+    a set of nodes. All nodes added to a cluster get their
+    :attr:`balance_constraints` turned off for the resource ``R``,
+    and instead the cluster makes an aggregated balance constraint
+    for all the nodes. In this way, a :class:`Cluster` is like a
+    :class:`FlowNetwork` for resource ``R`` where all the parts are
+    connected to one another.
+
+    Args:
+        *parts (optional): Zero or more parts to put in the cluster.
+        resource: The resource this cluster handles.
+        name (optional): A name for the cluster.
+
+    Examples:
+
+        >>> tbc
+
+    """
     
     def __init__(self, *parts, resource=None, name=None):
         super().__init__(name=name)

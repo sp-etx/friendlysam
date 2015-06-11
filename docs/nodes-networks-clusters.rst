@@ -51,7 +51,7 @@ The ``Consumer`` instance and the ``PowerPlant`` instance were added to the powe
 
 Now let's look at something less obvious:
 
-    >>> for part in [power_plant, consumer, power_grid]:
+    >>> for part in [consumer, power_plant, power_grid]:
     ...     for constraint in part.constraints(3):
     ...         print(constraint.long_description)
     ...         print(constraint.expr)
@@ -59,13 +59,13 @@ Now let's look at something less obvious:
     ...
     <friendlysam.opt.Constraint at 0x...>
     Description: Balance constraint (resource=power)
-    Origin: CallTo(func=<bound method PowerPlant.balance_constraints of <PowerPlant at 0x...: PowerPlant0001>>, index=3)
-    PowerPlant0001.output(3) == Power grid.flow(PowerPlant0001-->Consumer0001)(3)
+    Origin: CallTo(func=<bound method Consumer.balance_constraints of <Consumer at 0x...: Consumer0001>>, index=3, owner=<Consumer at 0x...: Consumer0001>)
+    Power grid.flow(PowerPlant0001-->Consumer0001)(3) == 29
     <BLANKLINE>
     <friendlysam.opt.Constraint at 0x...>
     Description: Balance constraint (resource=power)
-    Origin: CallTo(func=<bound method Consumer.balance_constraints of <Consumer at 0x...: Consumer0001>>, index=3)
-    Power grid.flow(PowerPlant0001-->Consumer0001)(3) == 29
+    Origin: CallTo(func=<bound method PowerPlant.balance_constraints of ...>, index=3, owner=<PowerPlant at 0x...: PowerPlant0001>)
+    PowerPlant0001.output(3) == Power grid.flow(PowerPlant0001-->Consumer0001)(3)
     <BLANKLINE>
 
 The :meth:`~friendlysam.parts.FlowNetwork.connect` call creates a flow between two nodes, and it adds this flow to the appropriate :attr:`~friendlysam.parts.Node.outflows` or :attr:`~friendlysam.parts.Node.inflows` on those two nodes. Each :class:`~friendlysam.parts.Node` can then formulate its own balance constraints.
@@ -163,7 +163,7 @@ When a :class:`~friendlysam.parts.Node` is put in a :class:`~friendlysam.parts.C
     ...
     <friendlysam.opt.Constraint at 0x...>
     Description: Balance constraint (resource=power)
-    Origin: CallTo(func=<bound method Cluster.balance_constraints of <Cluster at 0x...: Power cluster>>, index=2)
+    Origin: CallTo(func=<bound method Cluster.balance_constraints ...>, index=2, owner=<Cluster at 0x...: Power cluster>)
     PowerPlant0002.output(2) == 33
 
 
