@@ -36,14 +36,14 @@ class ConstraintCollection(object):
         self._owner = owner
         self._constraint_funcs = set()
 
-    _origin_tuple = namedtuple('CallTo', ['func', 'index'])
+    _origin_tuple = namedtuple('CallTo', ['func', 'index', 'owner'])
 
     def __call__(self, index):
         """Create constraints from contained functions."""
         constraints = set()
 
         for func in self._constraint_funcs:
-            origin = self._origin_tuple(func=func, index=index)
+            origin = self._origin_tuple(func=func, index=index, owner=self._owner)
             func_output = func(index)
             try:
                 func_output = iter(func_output)
