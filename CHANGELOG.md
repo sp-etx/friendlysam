@@ -14,6 +14,9 @@
  - Moved some `__init__` code to `__new__` to simplify inheritance of e.g. `Node`.
  - Node.resources now contains keys from inflows and outflows.
 
+### Removed
+ - Removed Part.add_parts()
+
 ### Fixed
 - Fixed a serious bug in `FlowNetwork`/`Node` implementation causing problems if one `Node` was connected in several `FlowNetwork`s.
 - Doctests work under Linux

@@ -100,7 +100,7 @@ class Part(object):
 
         2. A ``Part`` can contain other parts. Read more about
 
-            * :meth:`add_part`, :meth:`add_parts`, :meth:`remove_part`
+            * :meth:`add_part`, :meth:`remove_part`
             * :meth:`parts`
             * :meth:`find`
             * :attr:`children`, :attr:`children_and_self`, :attr:`descendants`, :attr:`descendants_and_self`
@@ -524,7 +524,8 @@ class Cluster(Node):
             msg = '{} is not a valid resource'.format(resource)
             raise ValueError(msg).with_traceback(sys.exc_info()[2])
         self._resource = resource
-        self.add_parts(*parts)
+        for p in parts:
+            self.add_part(p)
 
         self.consumption[self._resource] = self._get_aggr_func('consumption')
         self.production[self._resource] = self._get_aggr_func('production')
@@ -638,7 +639,8 @@ class FlowNetwork(Part):
         edges = self._graph.edges()
             
         if not (n1, n2) in edges:
-            self.add_parts(n1, n2)
+            self.add_part(n1)
+            self.add_part(n2)
             self._graph.add_edge(n1, n2)
             name = 'flow({}-->{})'.format(n1, n2)
             with namespace(self):
