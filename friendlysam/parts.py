@@ -1025,7 +1025,6 @@ class FlowNetwork(Part):
         network.flow(producer-->storage)(5) == network.flow(storage-->consumer)(5) + storage.volume(6) - storage.volume(5)
         <BLANKLINE>
 
-
     """
     def __init__(self, resource, name=None):
         super().__init__(name=name)
@@ -1034,19 +1033,46 @@ class FlowNetwork(Part):
         self._flows = dict()
 
     @property
-    def nodes(self):
-        return self._graph.nodes()
+    def graph(self):
+        """A graph of all the flows.
 
-    @property
-    def edges(self):
-        return self._graph.edges()
+        Gets a NetworkX ``DiGraph`` representation of the graph of how nodes
+        are connected. See https://networkx.github.io/ for details.
+
+        The graph object is a copy of the internal graph, so changing
+        it does not affect the ``FlowNetwork``
+
+        Examples:
+
+            >>> FlowNetwork('resource').graph
+            <networkx.classes.digraph.DiGraph object at 0x...>
+        """
+        return self._graph.copy()
+    
 
     def remove_part(self, part):
         raise NotImplementedError('need to also remove edges then')
 
 
     def connect(self, n1, n2, bidirectional=False, capacity=None):
-        """docstring"""
+        """Connect two nodes.
+
+        Creates a flow and adds it to
+        ``n1.outflows[resource]`` and ``n2.inflows[resource]``,
+        if it does not already exist. Calling again makes no difference.
+
+        The flow must be nonnegative. For bidirectional flows, use
+        ``bidirectional=True``.
+
+        Args:
+            n1: The node the flow goes from.
+            n2: The node the flow goes to.
+            bidirectional (boolean, optional): Create a two-way flow?
+            capacity (float, optional): The maximum amount that can flow
+                between the nodes. Creates an upper bound ``ub=capacity``
+                on the flow :class:`~friendlysam.opt.Variable` for each index.
+
+        """
         edges = self._graph.edges()
             
         if not (n1, n2) in edges:
@@ -1064,7 +1090,21 @@ class FlowNetwork(Part):
             self.connect(n2, n1)
 
     def get_flow(self, n1, n2):
+        """Get a flow between two nodes.
+
+        Args:
+            n1: The node the flow goes from.
+            n2: The node the flow goes to.
+
+        Returns:
+            a ``VariableCollection``
+
+        Raises:
+            KeyError: If the flow does not exist.
+        """
+
         return self._flows[n1, n2]
 
     def state_variables(self, index):
+        """The state variables are all the flow variables."""
         return tuple(var(index) for var in self._flows.values())
