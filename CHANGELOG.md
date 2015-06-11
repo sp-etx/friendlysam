@@ -1,6 +1,6 @@
 # Friendly Sam change log
 
-## [unreleased] - unreleased
+## [0.3.0] - unreleased
 
 =======
 
@@ -13,6 +13,7 @@
 ### Changed
  - Moved some `__init__` code to `__new__` to simplify inheritance of e.g. `Node`.
  - Node.resources now contains keys from inflows and outflows.
+ - Renamed `ConstraintCollection.__call__()` to `.make()`.
 
 ### Removed
  - Removed Part.add_parts()

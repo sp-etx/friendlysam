@@ -21,7 +21,7 @@ def test_cluster():
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob += (part.constraints(t) for part, t in product(cl.descendants_and_self, times))
+    prob += (part.constraints.make(t) for part, t in product(cl.descendants_and_self, times))
 
     prob.objective = fs.Minimize(sum(p.cost(t) for t in times))
 
@@ -47,11 +47,11 @@ def test_cluster_balance_constraint():
     n = Node()
     n.production[RESOURCE] = lambda idx: 0
     index = 0
-    assert len(n.constraints(index)) == 1
+    assert len(n.constraints.make(index)) == 1
     c = Cluster(n, resource=RESOURCE)
-    assert len(n.constraints(index)) == 0
+    assert len(n.constraints.make(index)) == 0
     c.remove_part(n)
-    assert len(n.constraints(index)) == 1
+    assert len(n.constraints.make(index)) == 1
 
 
 def test_cluster_add_remove():
@@ -91,7 +91,7 @@ def test_balance_simple():
     c = Consumer(consumption, name='Consumer')
 
     prob = fs.Problem()
-    prob.add(c.constraints(time))
+    prob.add(c.constraints.make(time))
 
     prob.objective = fs.Minimize(c.consumption[RESOURCE](time))
 

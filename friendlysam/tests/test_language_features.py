@@ -46,7 +46,7 @@ def check_variant(variant, sum_func=sum):
     cl = Cluster(p, c, resource=RESOURCE, name='Cluster')
 
     prob = fs.Problem()
-    prob += (part.constraints(t) for part, t in product(cl.descendants_and_self, times))
+    prob += (part.constraints.make(t) for part, t in product(cl.descendants_and_self, times))
 
     prob.objective = fs.Minimize(sum_func(p.cost(t) for t in times))
 

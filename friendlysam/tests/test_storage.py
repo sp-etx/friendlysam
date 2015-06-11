@@ -26,7 +26,7 @@ def test_basic_functionality():
     rn.connect(s, c)
 
     prob = Problem()
-    prob += (part.constraints(t) for part, t in product(rn.descendants_and_self, times))
+    prob += (part.constraints.make(t) for part, t in product(rn.descendants_and_self, times))
 
     prob.objective = Minimize(Sum(p.cost(t) for t in times))
 

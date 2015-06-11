@@ -52,7 +52,7 @@ The ``Consumer`` instance and the ``PowerPlant`` instance were added to the powe
 Now let's look at something less obvious:
 
     >>> for part in [consumer, power_plant, power_grid]:
-    ...     for constraint in part.constraints(3):
+    ...     for constraint in part.constraints.make(3):
     ...         print(constraint.long_description)
     ...         print(constraint.expr)
     ...         print()
@@ -98,7 +98,7 @@ Here are a few simple rules for how balance constraints are made:
     * The constraints of the node are accessed by calling something like
 
         >>> index = 3
-        >>> constraints = power_plant.constraints(index)
+        >>> constraints = power_plant.constraints.make(index)
 
       The index is passed on to the functions: ``production[resource](index)``, ``consumption[resource](index)``, etc. You can use any function or object as ``production[resource]``, ``consumption[resource]``, etc, as long as it is callable. The index can be any hashable object.
 
@@ -157,7 +157,7 @@ When a :class:`~friendlysam.parts.Node` is put in a :class:`~friendlysam.parts.C
     >>> consumer = Consumer(power_demand)
     >>> power_cluster = Cluster(power_plant, consumer, resource='power', name='Power cluster')
     >>> for part in power_cluster.descendants_and_self:
-    ...     for constraint in part.constraints(2):
+    ...     for constraint in part.constraints.make(2):
     ...         print(constraint.long_description)
     ...         print(constraint.expr)
     ...
