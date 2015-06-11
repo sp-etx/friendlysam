@@ -130,11 +130,11 @@ class Part(object):
             * :meth:`times_between` and :meth:`iter_times_between`
 
     Args:
-        name (str, optional): A name for the part.
+        name (str, optional): The :attr:`name` of the part.
 
     Examples:
 
-        See :class:`Node`.
+        See :class:`Node` for examples.
 
     """
 
@@ -378,8 +378,8 @@ class Part(object):
         A constraint function may also return an iterable of constraints,
         even a generator.
 
-        All the added constraint functions are called when :meth:`constraints`
-        is called.
+        All the added constraint functions are called when 
+        :meth:`~ConstraintCollection.make` is called.
 
         Examples:
 
@@ -436,7 +436,8 @@ class Part(object):
     @constraints.setter
     def constraints(self, value):
         if value is not self._constraints:
-            raise AttributeError('you are not allowed to change this one')
+            raise AttributeError("Don't replace the constraint collection. "
+                "Use constraints.add() to add constraint functions.")
 
     def __repr__(self):
         if self.name:
@@ -503,22 +504,28 @@ class Part(object):
 
     @property    
     def children(self):
-        """Parts in this part, excluding ``self``."""
+        """Parts in this part, excluding ``self``.
+
+        To add children, use :meth:`add_part`.
+        """
         return self.parts(depth=1, include_self=False)
 
     @property
     def children_and_self(self):
-        """Parts in this part, including ``self``."""
+        """Parts in this part, including ``self``.
+
+        To add children, use :meth:`add_part`.
+        """
         return self.parts(depth=1, include_self=True)
 
     @property
     def descendants(self):
-        """All children, children of children, etc, excluding ``self``."""
+        """All :attr:`children`, children of children, etc, excluding ``self``."""
         return self.parts(depth='inf', include_self=False)
 
     @property
     def descendants_and_self(self):
-        """All children, children of children, etc, including ``self``."""
+        """All :attr:`children`, children of children, etc, including ``self``."""
         return self.parts(depth='inf', include_self=True)
 
 
@@ -541,7 +548,7 @@ class Part(object):
 
 
     def remove_part(self, part):
-        """Remove a part from self this part.
+        """Remove a part from this part.
 
         Args:
             p (:class:`Part` or subclass instance): The part to remove.
@@ -615,11 +622,11 @@ class Node(Part):
 
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, *args, **kwargs)
-        self.consumption = dict()
-        self.production = dict()
-        self.accumulation = dict()
-        self.inflows = defaultdict(set)
-        self.outflows = defaultdict(set)
+        self._consumption = dict()
+        self._production = dict()
+        self._accumulation = dict()
+        self._inflows = defaultdict(set)
+        self._outflows = defaultdict(set)
         self._clusters = dict()
 
         self.constraints += self.balance_constraints
@@ -630,11 +637,59 @@ class Node(Part):
         if name is not None:
             self.name = name
 
+    @property
+    def consumption(self):
+        """A dictionary of consumption functions.
+
+        Each key in the
+        dictionary is a resource, and the value is a function, taking one argument
+        ``index``, returning the consumption at that index.
+        """
+        return self._consumption
+    
+    @property
+    def production(self):
+        """A dictionary of production functions.
+
+        See :attr:`consumption`.
+        """
+        return self._production
+
+    @property
+    def accumulation(self):
+        """A dictionary of accumulation functions.
+
+        See :attr:`consumption`.
+        """
+        return self._accumulation
+
+    @property
+    def inflows(self):
+        """A dictionary of sets of inflow functions.
+
+        Each key in the dictionary
+        is a resource, and the corresponding value is a set. Each item in each set
+        is a function, taking one argument ``index``, returning the
+        an inflow of that resource at that index.
+        """
+        return self._inflows
+    
+    @property
+    def outflows(self):
+        """A dictionary of sets of outflow functions.
+
+        Each key in the dictionary
+        is a resource, and the corresponding value is a set. Each item in each set
+        is a function, taking one argument ``index``, returning the
+        an outflow of that resource at that index.
+        """
+        return self._outflows
+
 
     def set_cluster(self, cluster):
         """Add this node to a :class:`Cluster`.
 
-        Use :meth:`Cluster.add_part` instead.
+        You should probably use :meth:`Cluster.add_part` instead.
 
         Args:
             cluster: The :node:`Cluster` instance to add to.
@@ -655,7 +710,7 @@ class Node(Part):
     def unset_cluster(self, cluster):
         """Remove from a :class:`Cluster`.
 
-        Use :meth:`Cluster.add_part` instead.
+        You should probably use :meth:`Cluster.remove_part` instead.
 
         Args:
             cluster: The :node:`Cluster` instance to remove from.
@@ -705,7 +760,7 @@ class Node(Part):
     def resources(self):
         """The set of resources this node handles.
 
-        A set containing all the keys of the dictionaries:
+        This is the set of all keys found in the following dictionaries:
 
             * :attr:`consumption`
             * :attr:`production`
@@ -740,7 +795,7 @@ class Cluster(Node):
     """A node containing other nodes, fully connected.
 
     A cluster is used to create a free flow of a resource ``R`` among
-    a set of nodes. All nodes added to a cluster get their
+    a set of nodes. All :attr:`children` of a cluster get their
     :attr:`balance_constraints` turned off for the resource ``R``,
     and instead the cluster makes an aggregated balance constraint
     for all the nodes. In this way, a :class:`Cluster` is like a
@@ -754,7 +809,33 @@ class Cluster(Node):
 
     Examples:
 
-        >>> tbc
+        Let's create three nodes:
+
+        >>> producer = Node(name='producer')
+        >>> producer.production['R'] = VariableCollection('prod')
+        >>> consumer = Node(name='consumer')
+        >>> consumer.consumption['R'] = VariableCollection('cons')
+        >>> storage = Storage(resource='R', name='storage')
+        >>> nodes = [consumer, producer, storage]
+
+        Now they all make a balance constraint at any given index:
+
+        >>> sum(len(n.constraints.make(5)) for n in nodes)
+        3
+
+        After clustering, they don't make balance constraints:
+
+        >>> cluster = Cluster(*nodes, resource='R', name='cluster')
+        >>> sum(len(n.constraints.make(5)) for n in nodes) # They all make a balance constraint
+        0
+
+        But the :class:`Cluster` does:
+
+        >>> for constr in cluster.constraints.make(5):
+        ...     print(constr.expr)
+        ...
+        prod(5) == cons(5) + storage.volume(6) - storage.volume(5)
+
 
     """
     
@@ -802,10 +883,20 @@ class Cluster(Node):
 
     @property
     def resource(self):
+        """The resource this cluster collects. Read only."""
         return self._resource
 
 
     def add_part(self, part):
+        """Add a part to this cluster.
+
+        Args:
+            part (:class:`Part` or subclass instance): The part to add.
+
+        Raises:
+            InsanityError: If the calling part is a descendant of the part to add.
+                (This would generate a cyclic relationship.)
+        """
         super().add_part(part)
         if not part.cluster(self.resource) is self:
             try:
@@ -816,30 +907,67 @@ class Cluster(Node):
 
 
     def remove_part(self, part):
+        """Remove a part from this part.
+
+        Args:
+            p (:class:`Part` or subclass instance): The part to remove.
+
+        Raises:
+            KeyError: If the part is not there.
+        """
         super().remove_part(part)
         if part.cluster(self.resource) is not None:
             part.unset_cluster(self)
 
 
-    def state_variables(self, t):
+    def state_variables(self, index):
+        """Cluster does not have state variables."""
         return tuple()
 
 
 class Storage(Node):
-    """docstring for Storage"""
+    """Simple storage model.
+
+    The storage has a volum
+
+    Args:
+        resource: The resource to store.
+        capacity (float, optional): The maximum amount that can be stored. If
+            ``None`` (the default), there is no limit.
+        maxchange (float, optional): The :attr:`maxchange` of the storage.
+        name (str, optional): The :attr:`name` of the node.
+
+    """
     def __init__(self, resource, capacity=None, maxchange=None, name=None):
-        super().__init__(name=None)
-        self.resource = resource
-        self.capacity = capacity
+        if name is not None:
+            self.name = name
+        self._resource = resource
+        #:The maximum net inflow/outflow the storage
+        #:can manage in one time step. In mathematical terms, it requires
+        #:``abs(accumulation[resource](index)) <= maxchange`` for each ``index``.
+        #:If ``None`` (the default), there is no limit.
         self.maxchange = maxchange
 
         with namespace(self):
+            #:The volume of the storage at any time. Think of it as the
+            #:volume at the **start** of a time step. To be concrete,
+            #:``accumulation[resource](t) == volume(t+1) - volume(t)`` if
+            #:the model is simply indexed in integers representing time.
+            #:(And in more general terms,
+            #:``accumulation[resource](idx) == volume(step_time(idx, 1)) - volume(idx)``
+            #:for any index ``idx``.)
             self.volume = VariableCollection('volume', lb=0., ub=capacity)
-        self.accumulation[resource] = self._accumulation
+        self.accumulation[resource] = self._compute_accumulation
 
         self.constraints += self._maxchange_constraints
 
-    def _accumulation(self, index):
+    @property
+    def resource(self):
+        """The resource this storage stores. Read only."""
+        return self._resource
+    
+
+    def _compute_accumulation(self, index):
         return self.volume(self.step_time(index, 1)) - self.volume(index)
 
     def _maxchange_constraints(self, index):
@@ -851,16 +979,58 @@ class Storage(Node):
             RelConstraint(-maxchange <= acc, 'Max net outflow'))
 
     def state_variables(self, index):
+        """The only state variable is :attr:`volume` ``(index)``."""
         return {self.volume(index)}
 
 
 class FlowNetwork(Part):
-    """docstring for FlowNetwork"""
-    def __init__(self, resource, **kwargs):
-        super().__init__(**kwargs)
-        self.resource = resource
-        self._graph = nx.DiGraph()
+    """Manages flows between nodes.
 
+    :class:`FlowNetwork` creates flow variables and can connect
+    :class:`Node` instances by changing their :attr:`~Node.inflows`
+    and :attr:`~Node.outflows`.
+
+    Args:
+        resource: The resource flowing in the network.
+        name (str, optional): The :attr:`name` of the network.
+
+    Examples:
+
+        We create three nodes: A producer, a storage, and a consumer.
+
+        >>> producer = Node(name='producer')
+        >>> producer.production['R'] = VariableCollection('prod')
+        >>> consumer = Node(name='consumer')
+        >>> consumer.consumption['R'] = VariableCollection('cons')
+        >>> storage = Storage(resource='R', name='storage')
+
+        Connect the producer to the storage, and the storage to the consumer.
+
+        >>> network = FlowNetwork(resource='R', name='network')
+        >>> network.connect(producer, storage)
+        >>> network.connect(storage, consumer)
+        >>> for part in [producer, consumer, storage]:
+        ...     for constr in part.constraints.make(5):
+        ...         print(constr.origin.owner)
+        ...         print(constr.expr)
+        ...         print()
+        ...
+        producer
+        prod(5) == network.flow(producer-->storage)(5)
+        <BLANKLINE>
+        consumer
+        network.flow(storage-->consumer)(5) == cons(5)
+        <BLANKLINE>
+        storage
+        network.flow(producer-->storage)(5) == network.flow(storage-->consumer)(5) + storage.volume(6) - storage.volume(5)
+        <BLANKLINE>
+
+
+    """
+    def __init__(self, resource, name=None):
+        super().__init__(name=name)
+        self._resource = resource
+        self._graph = nx.DiGraph()
         self._flows = dict()
 
     @property
@@ -874,6 +1044,7 @@ class FlowNetwork(Part):
     def remove_part(self, part):
         raise NotImplementedError('need to also remove edges then')
 
+
     def connect(self, n1, n2, bidirectional=False, capacity=None):
         """docstring"""
         edges = self._graph.edges()
@@ -886,8 +1057,8 @@ class FlowNetwork(Part):
             with namespace(self):
                 flow = VariableCollection(name, lb=0, ub=capacity)
             self._flows[(n1, n2)] = flow
-            n1.outflows[self.resource].add(flow)
-            n2.inflows[self.resource].add(flow)
+            n1.outflows[self._resource].add(flow)
+            n2.inflows[self._resource].add(flow)
 
         if bidirectional and (n2, n1) not in edges:
             self.connect(n2, n1)
