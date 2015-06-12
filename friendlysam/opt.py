@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Variables, expressions, constraints, optimization problems."""
+
 import logging
 logger = logging.getLogger(__name__)
 import sys
@@ -25,7 +27,7 @@ def _prefix_namespace(s):
 
 @contextmanager
 def namespace(name):
-    """Context manager for prefixing variable names.
+    """Prefix variable names.
 
     Examples:
 

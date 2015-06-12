@@ -1,9 +1,9 @@
 Flow networks: Nodes and resources
 ===================================
 
-.. warning::
+.. note::
 
-    This tutorial only teaches the very basics of how to use Friendly Sam. To learn more, follow the links into the code reference of :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, etc.
+    This tutorial does not cover everything. To learn more, follow the links into the code reference of :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, :class:`~friendlysam.parts.Cluster` etc.
 
 Friendly Sam makes it easy to formulate optimization problems with flow networks. Let's begin with an example.
 

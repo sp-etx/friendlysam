@@ -32,11 +32,11 @@ Contents:
    what-friendly-sam-is-for
    variables-and-expressions
    optimization-problems
+   model-basics
    nodes-networks-clusters
    more-about-constraints(adding own constraints, SOS, nice ways to express with product, ...)
    advanced-time
-   example-model
-   apidoc/friendlysam
+   api
 
 
 Indices and tables

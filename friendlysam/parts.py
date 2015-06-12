@@ -14,8 +14,6 @@ from friendlysam.opt import Constraint, VariableCollection, namespace
 from friendlysam.compat import ignored
 
 
-class InsanityError(Exception): pass
-
 
 class ConstraintCollection(object):
     """
@@ -363,7 +361,7 @@ class Part(object):
 
     @property
     def constraints(self):
-        '''An aggregator for constraint functions.
+        '''For defining and generating constraints.
 
         This is a :class:`ConstraintCollection` instance. Add functions or 
         iterables of functions to it. Each function
@@ -540,7 +538,7 @@ class Part(object):
                 (This would generate a cyclic relationship.)
         """
         if self in part.descendants_and_self:
-            raise InsanityError(
+            raise fs.InsanityError(
                 ('cannot add {} to {} because it would '
                 'generate a cyclic relationship').format(part, self))
 
@@ -697,9 +695,9 @@ class Node(Part):
         res = cluster.resource
         if res in self._clusters:
             if self._clusters[res] is not cluster:
-                raise InsanityError('already in another cluster with that resource!')
+                raise fs.InsanityError('already in another cluster with that resource!')
             else:
-                raise InsanityError('this has already been done')
+                raise fs.InsanityError('this has already been done')
         else:
             self._clusters[res] = cluster
 
@@ -717,7 +715,7 @@ class Node(Part):
         """
         res = cluster.resource
         if not (res in self._clusters and self._clusters[res] is cluster):
-            raise InsanityError('cannot unset Cluster {} because it is not set'.format(cluster))        
+            raise fs.InsanityError('cannot unset Cluster {} because it is not set'.format(cluster))        
         del self._clusters[res]
         if self in cluster.children:
             cluster.remove_part(self)
@@ -901,7 +899,7 @@ class Cluster(Node):
         if not part.cluster(self.resource) is self:
             try:
                 part.set_cluster(self) # May raise an exception.
-            except InsanityError as e:
+            except fs.InsanityError as e:
                 super().remove_part(part) # Roll back on exception.
                 raise
 
