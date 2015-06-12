@@ -13,7 +13,7 @@ import numbers
 
 import friendlysam as fs
 from friendlysam.compat import ignored
-from friendlysam.common import short_default_repr
+from friendlysam.util import _short_default_repr
 
 _namespace_string = ''
 
@@ -315,7 +315,7 @@ class Operation(object):
     def __str__(self):
         return self._format.format(*(self._format_arg(a) for a in self._args))
 
-    __repr__ = short_default_repr
+    __repr__ = _short_default_repr
 
     def __float__(self):
         return float(self.value)
@@ -363,7 +363,7 @@ class _MathEnabled(object):
     def __gt__(self, other):
         return Less(other, self)
 
-    __repr__ = short_default_repr
+    __repr__ = _short_default_repr
 
 
 class Add(Operation, _MathEnabled):
@@ -768,7 +768,7 @@ class Variable(_MathEnabled):
 
 
     def __repr__(self):
-        return short_default_repr(self, desc=str(self))
+        return _short_default_repr(self, desc=str(self))
 
 
     def __float__(self):
@@ -947,7 +947,7 @@ class VariableCollection(object):
 
 
     def __repr__(self):
-        return short_default_repr(self, desc=str(self))
+        return _short_default_repr(self, desc=str(self))
 
 
 class ConstraintError(Exception):
@@ -997,7 +997,7 @@ class _ConstraintBase(object):
     def variables(self):
         raise NotImplementedError('this is a responsibility of subclasses')
 
-    __repr__ = short_default_repr
+    __repr__ = _short_default_repr
 
 
 class Constraint(_ConstraintBase):

@@ -12,7 +12,7 @@ try:
 except ImportError:
     pandas = None
 
-def short_default_repr(obj, desc=None):
+def _short_default_repr(obj, desc=None):
     if desc is None:
         return '<{}.{} at {}>'.format(obj.__module__, obj.__class__.__name__, hex(id(obj)))
     return '<{}.{} at {}: {}>'.format(obj.__module__, obj.__class__.__name__, hex(id(obj)), desc)
