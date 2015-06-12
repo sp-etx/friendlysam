@@ -14,6 +14,7 @@
  - Moved some `__init__` code to `__new__` to simplify inheritance of e.g. `Node`.
  - Node.resources now contains keys from inflows and outflows.
  - Renamed `ConstraintCollection.__call__()` to `.make()`.
+ - Renamed `common` module to `util`.
 
 ### Removed
  - Removed Part.add_parts()
