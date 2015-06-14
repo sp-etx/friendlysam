@@ -486,6 +486,23 @@ class Part(object):
 
         Returns:
             A set of parts.
+
+        Examples:
+
+            >>> child = Part(name='Baby')
+            >>> parent = Part(name='Mommy')
+            >>> parent.add_part(child)
+            >>> grandparent = Part('Granny')
+            >>> grandparent.add_part(parent)
+            >>> grandparent.children == {parent}
+            True
+            >>> grandparent.descendants == {parent, child}
+            True
+            >>> grandparent.descendants_and_self == {grandparent, parent, child}
+            True
+            >>> grandparent.parts(depth=1, include_self=False) == grandparent.children
+            True
+
         """
         parts = set()
         depth = float(depth)
