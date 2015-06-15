@@ -67,6 +67,29 @@ To run all the tests, including doctests in the source code and doctests in this
 Releasing Friendly Sam
 ---------------------------
 
+Before releasing
+^^^^^^^^^^^^^^^^^^^^
+
+    1. Make sure that the documentation is complete and builds OK. In ``friendlysam/docs``::
+
+        make html
+
+    2. Make sure that the tests pass. In project root directory::
+
+        nosetests --with-doctest --doctest-options=+ELLIPSIS
+
+    3. Make sure the changelog is up-to-date.
+
+    4. Update ``version.txt`` with the next semantic version number: http://semver.org/
+
+    5. Commit and push to ``master`` branch. Then **tag the release** and push the tag::
+
+        git tag -a vX.Y.Z -m 'Version X.Y.Z'
+        git push origin vX.Y.Z
+
+Releasing to PyPI
+^^^^^^^^^^^^^^^^^^^
+
 If Friendly Sam is installed in develop mode, you should already have `twine <https://pypi.python.org/pypi/twine>`_ (for secure communication with PyPI) and `wheel <https://pypi.python.org/pypi/wheel>`_ (for building wheel distribution files).
 
     1. To put things on PyPI, you have to register on PyPI, and you should register on the test PyPI too:
