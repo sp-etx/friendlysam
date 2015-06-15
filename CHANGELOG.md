@@ -1,10 +1,13 @@
 # Friendly Sam change log
 
-## [0.3.0] - unreleased
+## [X.Y.Z] - unreleased
+
+## [0.3.0] - 2015-06-15
 
 =======
 
 ### Added
+ - A lot of documentation.
  - Added `ub`, `lb`, and `domain` to `VariableCollection`.
  - Added `long_description` to `Constraint`.
  - Added `capacity` keyword arg to `FlowNetwork.connect()`.
