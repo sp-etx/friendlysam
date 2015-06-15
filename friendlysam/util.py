@@ -25,17 +25,17 @@ def get_list(func, indices):
         indices (iterable): An iterable of index values to pass to ``func``.
 
     Returns:
-        list: ``[float(func(index)) for index in indices]``
+        list: values as ``float``
 
     Examples:
 
         >>> from friendlysam import Storage
         >>> s = Storage('power', name='Battery')
         >>> for i in range(5):
-        ...     s.volume(i).value = 6 * i - i ** 2
+        ...     s.volume(i).value = i ** 2
         ...
         >>> get_list(s.accumulation['power'], range(4))
-        [5.0, 3.0, 1.0, -1.0]
+        [1.0, 3.0, 5.0, 7.0]
     """
 
     return [float(func(index)) for index in indices]
@@ -58,13 +58,13 @@ def get_series(func, indices, **kwargs):
         >>> from friendlysam import Storage
         >>> s = Storage('power', name='Battery')
         >>> for i in range(5):
-        ...     s.volume(i).value = 6 * i - i ** 2
+        ...     s.volume(i).value = i ** 2
         ...
         >>> get_series(s.accumulation['power'], range(4))
-        0    5
+        0    1
         1    3
-        2    1
-        3   -1
+        2    5
+        3    7
         dtype: float64
     """
     if not pandas:
