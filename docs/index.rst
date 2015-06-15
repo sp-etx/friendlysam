@@ -34,8 +34,7 @@ Contents:
    optimization-problems
    model-basics
    nodes-networks-clusters
-   more-about-constraints(adding own constraints, SOS, nice ways to express with product, ...)
-   advanced-time
+   example-model
    api
 
 

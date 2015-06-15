@@ -199,6 +199,9 @@ class Part(object):
                 def step_time(self, index, num_steps):
                     return index + self.time_unit * num_steps
 
+            The default ``time_unit`` is ``1``, so time stepping is done
+            by adding an integer.
+
                 >>> part = Part()
                 >>> part.step_time(3, -2)
                 1
@@ -608,10 +611,11 @@ class Part(object):
 class Node(Part):
     """A node with balance constraints.
 
-    Suitable for modeling nodes in a flow network.
-
-    A :class:`Node` instance produces balance constraints
-    for all its :attr:`resources`.
+    Suitable for modeling nodes in a flow network. A :class:`Node`
+    instance produces balance constraints for all its :attr:`resources`.
+    The dictionaries :attr:`consumption`, :attr:`production`, 
+    :attr:`accumulation`, :attr:`inflows`, and :attr:`outflows`, are the
+    basis for the balance constraints.
 
     Args:
         name (str, optional): A name for the node.
@@ -943,7 +947,16 @@ class Cluster(Node):
 class Storage(Node):
     """Simple storage model.
 
-    The storage has a volum
+    The storage has a volume function. It should be thought of as the
+    volume at the beginning of a time step, such that
+    ``volume(t) + accumulation[resource](t) == volume(t+1)``, or more
+    exactly,
+
+        >>> s = Storage('my_resource')
+        >>> t = 42
+        >>> t_plus_1 = s.step_time(t, 1)
+        >>> s.accumulation['my_resource'](t) == s.volume(t_plus_1) - s.volume(t)
+        True
 
     Args:
         resource: The resource to store.
@@ -951,6 +964,15 @@ class Storage(Node):
             ``None`` (the default), there is no limit.
         maxchange (float, optional): The :attr:`maxchange` of the storage.
         name (str, optional): The :attr:`name` of the node.
+
+    Examples:
+
+        >>> from pandas import Timestamp, Timedelta
+        >>> battery = Storage('power', name='Battery')
+        >>> battery.time_unit = Timedelta('3h')
+        >>> t = Timestamp('2015-06-10 18:00')
+        >>> print(battery.accumulation['power'](t))
+        Battery.volume(2015-06-10 21:00:00) - Battery.volume(2015-06-10 18:00:00)
 
     """
     def __init__(self, resource, capacity=None, maxchange=None, name=None):

@@ -4,7 +4,7 @@ Model basics: Parts and constraints
 Interconnected parts
 -----------------------
 
-Friendly Sam is made for optimization-based modeling of interconnected parts, producing and consuming various resources. For example, an urban energy system may have grids for district heating, electric power, fossil gas, etc. Consumers, producers, storages and other parts are connected to each other through these grids. Friendly Sam is made with this type of models in mind. Friendly Sam models make heavy use of the :class:`~friendlysam.parts.Part` class and its subclasses like :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, :class:`~friendlysam.parts.Cluster`, :class:`~friendlysam.parts.Storage`, etc. We will introduce these in due time, but first a few general things about :class:`~friendlysam.parts.Part`.
+Friendly Sam is made for optimization-based modeling of interconnected parts, producing and consuming various resources. For example, an urban energy system may have grids for district heating, electric power, fossil gas, etc. Consumers, producers, storages and other parts are connected to each other through these grids. To describe these relations, Friendly Sam models make heavy use of the :class:`~friendlysam.parts.Part` class and its subclasses like :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, :class:`~friendlysam.parts.Cluster`, :class:`~friendlysam.parts.Storage`, etc. We will introduce these in due time, but first a few general things about :class:`~friendlysam.parts.Part`.
 
 Parts have indexed constraints
 -------------------------------
@@ -40,16 +40,31 @@ Going back to the example, we can get the constraints out by making a ``Chocolat
 
 The result of ``constraints.make(47)`` is a set with one single constraint in it, saying that output at "time" 47 must be greater than or equal to output at "time" 46.
 
+.. note::
+
+    In the example above, we wrote ``last = self.step_time(time, -1)`` instead of just ``last = t-1``. This is because :class:`~friendlysam.parts.Part` has a bunch of nice functions to help out with time indexing. Read the API documentation for :meth:`~friendlysam.parts.Part.step_time`. Also check out :meth:`~friendlysam.parts.Part.times` and :meth:`~friendlysam.parts.Part.times_between`. For example, because we used ``step_time(...)``, we can easily change the time representation of our chocolate factory like this::
+
+        >>> from pandas import Timestamp, Timedelta
+        >>> chocolate_factory.time_unit = Timedelta('6h')
+        >>> constraints = chocolate_factory.constraints.make(Timestamp('2015-06-10 18:00'))
+        >>> for c in constraints:
+        ...     print(c.expr)
+        ...
+        ChocolateFactory0001.output(2015-06-10 12:00:00) <= ChocolateFactory0001.output(2015-06-10 18:00:00)
+
+
 Advanced indexing
 -------------------
 
-It is up to you to decide what an index means, and what to use as indices. We call it "index" rather than "time" because it is something more general than just representing time. In fact, any hashable object can be used as an index, so you can do all sorts of complicated things. The point of indexing is just to organize models better: If the constraints of a :class:`~friendlysam.parts.Part` (or subclass) naturally belong in groups, be it time steps, locations on Earth, points in a grid, or something else, those things should be indices. With a whole bunch of parts, to get all the constraints that belong together, we can do something like this:
+Indexing is really just a way to organize constraints in groups that belong together. When we have a whole bunch of parts, to get all the constraints that belong together, we can do things like this:
 
     >>> from itertools import chain
     >>> parts = Part(), Part(), Part() # Put something more useful here...
     >>> some_index = 'could be anything'
     >>> constraints = set.union(*(p.constraints.make(some_index) for p in parts))
 
-There is no mechanism for using constraint functions without indices. If you want to make a static model and really don't need indexing, then just use some common index like ``None`` or ``0`` for everything.
+Indexing is typically used to represent time, but it is really up to you to decide what an index means, and what to use as indices. We call it "index" rather than "time" because it is something more general than a representation of time. In fact, any hashable object can be used as an index, so you can do all sorts of complicated things. Examples of indexing can be found in the docs for :meth:`~friendlysam.parts.Part.step_time`. Also check out :meth:`~friendlysam.parts.Part.times` and :meth:`~friendlysam.parts.Part.times_between`.
 
-For a few examples of indexing with different types of time indices, check out the docs for :meth:`~friendlysam.parts.Part.step_time`.
+Friendly Sam currently has no mechanism for using constraint functions without indices. If you want to make a static model and really don't need indexing, then just use some common index like ``None`` or ``0`` for everything. (Or come up with a better solution and `discuss it with us on GitHub <https://github.com/sp-etx/friendlysam/issues>`_.)
+
+In the next section :ref:`nodes_networks_clusters` you will also see how indexing is used to represent time in flow networks.   

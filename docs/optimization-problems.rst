@@ -78,7 +78,16 @@ OK, that's helpful! We got the problematic constraint out. And there are a few t
 
     3. The :class:`~friendlysam.opt.Constraint` object contains also a description ``desc`` and a variable called ``origin`` which is supposed to say something about where the constraint comes from.
 
-If you want to make your model easier to debug, you can add :class:`~friendlysam.opt.Constraint` instances to your problems, like in this stupid example:
+.. note::
+
+    There is a quicker way of printing out some info about a constraint: :attr:`~friendlysam.opt.Constraint.long_description`:
+
+        >>> print(failed_constraint.long_description)
+        <friendlysam.opt.Constraint at 0x...>
+        Description: Ad hoc constraint
+        Origin: None
+
+If you want to make your model easier to debug, you can use :class:`~friendlysam.opt.Constraint` instances with custom description and/or origin, like in this stupid example:
 
     >>> from friendlysam import Constraint
     >>> def constr(var, parameter):
@@ -105,3 +114,8 @@ Different ways to add constraints
         >>> prob += ([constr(x(i), i), constr(x(i+1), i)] for i in range(5))
 
     See the documentation for :meth:`~friendlysam.opt.Problem.add` for all the details.
+
+Special ordered sets
+----------------------
+
+Friendly Sam also supports special ordered sets. You specify them as a sort of constraint: Check out :class:`~friendlysam.opt.SOS1` and :class:`~friendlysam.opt.SOS2`.

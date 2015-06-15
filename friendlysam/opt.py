@@ -607,9 +607,16 @@ class Eq(Relation):
 
     Warning:
 
-        This operation does not have overloaded operators for creation,
-        so instead you should use the constructor, ``Eq(a, b)``.
+        The operator ``==`` is reserved for checking object similarity, just
+        like we are used to in Python.
+        To create the relation "x equals y", use ``Eq``:
 
+            >>> from friendlysam import Eq
+            >>> my_var = Variable('x')
+            >>> my_var == 1
+            False
+            >>> print(Eq(my_var, 1))
+            x == 1
 
     Examples:
 

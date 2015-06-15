@@ -1,14 +1,19 @@
+.. _nodes_networks_clusters:
+
 Flow networks: Nodes and resources
 ===================================
 
 .. note::
 
-    This tutorial does not cover everything. To learn more, follow the links into the code reference of :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, :class:`~friendlysam.parts.Cluster` etc.
+    This tutorial does not cover everything. To learn more, follow the links into the API reference for :class:`~friendlysam.parts.Node`, :class:`~friendlysam.parts.FlowNetwork`, :class:`~friendlysam.parts.Cluster` etc.
 
 Friendly Sam makes it easy to formulate optimization problems with flow networks. Let's begin with an example.
 
+Nodes and balance constraints
+------------------------------------
+
 An example
-------------
+^^^^^^^^^^^
 
 Custom types of nodes should typically be created by subclassing :class:`~friendlysam.parts.Node`, like this::
 
@@ -35,7 +40,7 @@ We have now defined a ``PowerPlant`` class inheriting :class:`~friendlysam.parts
     >>> consumer.consumption['power'](3)
     29
 
-Let's now connect the two nodes:
+Now connect the two nodes:
 
     >>> from friendlysam import FlowNetwork
     >>> power_grid = FlowNetwork('power', name='Power grid')
@@ -49,7 +54,10 @@ The ``Consumer`` instance and the ``PowerPlant`` instance were added to the powe
 
     In this example, we use the key ``'power'`` in a few different places. Whatever we put as a key in a :attr:`~friendlysam.parts.Node.production` or :attr:`~friendlysam.parts.Node.consumption` dictionary, or a similar place, is called a **resource**. You are not limited to strings like ``'power'`` but could use any hashable type: numbers, tuples, most other objects, etc.
 
-Now let's look at something less obvious:
+Balance constraints
+^^^^^^^^^^^^^^^^^^^^
+
+Each :class:`~friendlysam.parts.Node` has a pre-defined constraint function for balance constraints, so calling ``constraints.make()`` on the nodes creates **balance constraints**. The dictionaries :attr:`~friendlysam.parts.Node.production` and :attr:`~friendlysam.parts.Node.consumption` are automatically included in these balance constraints. The :meth:`~friendlysam.parts.FlowNetwork.connect` call creates a flow between two nodes, and it adds this flow to the appropriate :attr:`~friendlysam.parts.Node.outflows` or :attr:`~friendlysam.parts.Node.inflows` on those two nodes. Each :class:`~friendlysam.parts.Node` can then formulate its own balance constraints:
 
     >>> for part in [consumer, power_plant, power_grid]:
     ...     for constraint in part.constraints.make(3):
@@ -67,19 +75,6 @@ Now let's look at something less obvious:
     Origin: CallTo(func=<bound method PowerPlant.balance_constraints of ...>, index=3, owner=<PowerPlant at 0x...: PowerPlant0001>)
     PowerPlant0001.output(3) == Power grid.flow(PowerPlant0001-->Consumer0001)(3)
     <BLANKLINE>
-
-The :meth:`~friendlysam.parts.FlowNetwork.connect` call creates a flow between two nodes, and it adds this flow to the appropriate :attr:`~friendlysam.parts.Node.outflows` or :attr:`~friendlysam.parts.Node.inflows` on those two nodes. Each :class:`~friendlysam.parts.Node` can then formulate its own balance constraints.
-
-Of course, we could now add these constraints to an optimization problem, just like any other constraint.
-
-.. note::
-
-    A :class:`~friendlysam.parts.Node` instance will always produce balance constraints for each of its :attr:`~friendlysam.parts.Node.resources`. Let's say we had not connected the ``PowerPlant`` instance to the consumer, then its balance constraint would be ``PowerPlant0001.output(3) == 0``. (Try it yourself!)
-
-
-
-Node
-------------------------------------
 
 
 How balance constraints are made
@@ -100,22 +95,28 @@ Here are a few simple rules for how balance constraints are made:
         >>> index = 3
         >>> constraints = power_plant.constraints.make(index)
 
-      The index is passed on to the functions: ``production[resource](index)``, ``consumption[resource](index)``, etc. You can use any function or object as ``production[resource]``, ``consumption[resource]``, etc, as long as it is callable. The index can be any hashable object.
+      The index is passed on to the functions: ``production[resource](index)``, ``consumption[resource](index)``, etc. In this way, indices always represent time when you are working with nodes and flow networks. You can use any function or object as ``production[resource]``, ``consumption[resource]``, etc, as long as it is callable. 
+
+.. note::
+
+    A :class:`~friendlysam.parts.Node` instance will always produce balance constraints for each of its :attr:`~friendlysam.parts.Node.resources`. Let's say we had not connected the ``PowerPlant`` instance to the consumer, then its balance constraint would be ``PowerPlant0001.output(3) == 0``. (Try it yourself!) In other words, flows of resources must always be balanced in a Friendly Sam model. Noone may produce a resource like ``'power'`` if it has nowhere to go, and noone can consume it unless there is a source.
 
 
 Custom names
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
-You can name your :class:`~friendlysam.parts.Node` instances if you want something more personal than ``PowerPlant0001``. Just set the property :attr:`~friendlysam.parts.Part.name`, for example in the ``__init__`` function, like this:
+.. note::
 
-    >>> class CHPPlant(Node):
-    ...     def __init__(self, name=None):
-    ...         if name:
-    ...             self.name = name
-    ...         ...
-    >>> chp_plant = CHPPlant(name='Rya KVV')
-    >>> chp_plant.name == str(chp_plant) == 'Rya KVV'
-    True
+    You can name your :class:`~friendlysam.parts.Node` instances if you want something more personal than ``PowerPlant0001``. Just set the property :attr:`~friendlysam.parts.Part.name`, for example in the ``__init__`` function, like this:
+
+        >>> class CHPPlant(Node):
+        ...     def __init__(self, name=None):
+        ...         if name:
+        ...             self.name = name
+        ...         ...
+        >>> chp_plant = CHPPlant(name='Rya KVV')
+        >>> chp_plant.name == str(chp_plant) == 'Rya KVV'
+        True
 
 
 FlowNetwork
@@ -172,11 +173,27 @@ Multi-area models
 
 A :class:`~friendlysam.parts.Cluster` instance can be used like any other :class:`~friendlysam.parts.Node`, for example in a :class:`~friendlysam.parts.FlowNetwork`. This is a simple way of making a multi-area model of, say, a district heating system. Let's say the system has a few areas with significant flow restrictions between them. Then create a flow network with interconnected clusters, something like this::
 
-    area_A == Cluster(*nodes_in_area_A, resource='heat')
-    area_B == Cluster(*nodes_in_area_B, resource='heat')
-    area_C == Cluster(*nodes_in_area_C, resource='heat')
+    area_A = Cluster(*nodes_in_area_A, resource='heat')
+    area_B = Cluster(*nodes_in_area_B, resource='heat')
+    area_C = Cluster(*nodes_in_area_C, resource='heat')
     
     heat_grid = FlowNetwork('heat')
     heat_grid.connect(area_A, area_B, bidirectional=True, capacity=ab)
     heat_grid.connect(area_A, area_C, bidirectional=True, capacity=ac)
     heat_grid.connect(area_B, area_C, bidirectional=True, capacity=bc)
+
+
+Time in flow networks
+-----------------------
+
+It is natural to think of indices like time periods: All the expressions for flows, production and consumption must add up, for each index (time period). As shown in the examples above, the balance constraints for an index is called by passing the index to :attr:`~friendlysam.parts.Node.production`, :attr:`~friendlysam.parts.Node.consumption`, :attr:`~friendlysam.parts.Node.outflows` and :attr:`~friendlysam.parts.Node.inflows`.
+
+There is another dictionary which is always used in balance constraints: :attr:`~friendlysam.parts.Node.accumulation`. It works just like the dictionaries :attr:`~friendlysam.parts.Node.production` and :attr:`~friendlysam.parts.Node.consumption`. To learn more, read the API docs for :class:`~friendlysam.parts.Storage`, and look at this example:
+
+    >>> from friendlysam import Storage
+    >>> from pandas import Timestamp, Timedelta
+    >>> battery = Storage('power', name='Battery')
+    >>> battery.time_unit = Timedelta('3h')
+    >>> t = Timestamp('2015-06-10 18:00')
+    >>> print(battery.accumulation['power'](t))
+    Battery.volume(2015-06-10 21:00:00) - Battery.volume(2015-06-10 18:00:00)
