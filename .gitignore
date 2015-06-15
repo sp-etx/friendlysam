@@ -1,4 +1,5 @@
 docs/_build/**
+docs/generated/**
 friendlysam.egg-info
 bin
 build
