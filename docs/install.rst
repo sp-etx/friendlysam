@@ -24,8 +24,10 @@ It is highly recommended that you use a virtual environment. It's not strictly n
 
 * **If you are on Linux**
 
-	Basically, you follow the instructions for Windows above but exchange ``C:\Python34\python.exe`` for something more suitable, and then do ``vex my_project_name bash`` instead. Also see the docs for `vex <https://pypi.python.org/pypi/vex>`_ if you have problems.
+	Basically, you follow the instructions for Windows above but exchange ``C:\Python34\python.exe`` for something more suitable, and then do ``vex my_project_name bash`` instead. Also see the docs for `vex <https://pypi.python.org/pypi/vex>`_ if you have problems. Make sure your ``pip`` and ``python`` commands points to ``pip3`` and ``python3`` respectively, in case you have multiple versions of python installed.
 
+If you get the error: ``distutils.errors.DistutilsOptionError: can't combine user with prefix`` when trying to install vex, execute pip with the --prefix flag: 
+``pip install --user --install-option="--prefix=" vex``
 
 Install Friendly Sam
 -----------------------------
